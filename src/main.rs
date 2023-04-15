@@ -1,5 +1,7 @@
 pub mod dataBased{
     
+    use std::{collections::HashMap, hash::Hash};
+
     use chrono::Utc;
 
     #[derive(Debug)]
@@ -7,13 +9,14 @@ pub mod dataBased{
         name: String,
         author: String,
         metadata: String,
-        database:Vec<Db>
+        database:HashMap<String,Db>,
+        logger:bool,
     }
 
     #[derive(Debug)]    
     pub struct Db{
         name:String,
-        table: Vec<Table>
+        table: HashMap<String,Table>
     }
     
     #[derive(Debug)]
@@ -52,7 +55,7 @@ pub mod dataBased{
 
         }
 
-        pub fn getDB(&self) -> &Vec<Db>{
+        pub fn getDB(&self) -> &HashMap<String, Db>{
 
             return &self.database;
 
@@ -64,9 +67,9 @@ pub mod dataBased{
 
             let mut x = String::from("[");
 
-            for i in g{
+            for (k,v) in g{
 
-                x.push_str(&i.name);
+                x.push_str(&k);
                 x.push_str(", ");
 
             }
@@ -89,12 +92,12 @@ pub mod dataBased{
 
         pub fn addDB(&mut self,x:String){
 
-            let x = Db{
-                name:x,
-                table:Vec::new()
+            let y = Db{
+                name:x.clone(),
+                table:HashMap::new()
             };
 
-            let _ = &self.database.push(x);
+            let _ = &self.database.insert(x,y);
 
         }
 
@@ -107,12 +110,13 @@ pub mod dataBased{
         meta.push_str("Date Created : ");
         meta.push_str(&Utc::now().to_string());
 
-        let mut x = Workspace{
+        let x = Workspace{
 
             name: x,
             author: y,
             metadata: meta,
-            database: Vec::new()
+            database: HashMap::new(),
+            logger:false
 
         };
 
