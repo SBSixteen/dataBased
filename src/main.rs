@@ -7,6 +7,7 @@ pub mod dataBased{
 
     use chrono::Utc;
     use colored::Colorize;
+    use rand::Rng;
 
     #[derive(Debug)]
     struct Logger{
@@ -47,8 +48,11 @@ pub mod dataBased{
                 -1 =>{
                     println!("{}{}| {} {} {}", " Error Code ".on_red() ,e_string.on_red() ,"Database named", &y.cyan(), "does not exist in the current workplace!");
                 }
-                -3 =>{
+                -2 =>{
                     println!("{}{}| {} {} {}", " Warning ".on_bright_yellow() , e_string.to_string().on_bright_yellow() ,"Database named", &y.cyan(), "already exists in workspace!");
+                }
+                -3 =>{
+                    println!("{}{}| {} {} {}", " Warning ".on_bright_yellow() , e_string.to_string().on_bright_yellow() ,"Table named", &y.cyan(), "already exists in this database!");
                 }
                 _ =>{
                     println!("{}{}| {}", " Undocumented Code ".on_truecolor(0,0,255), e_string.to_string().on_truecolor(0,0,255), "No definition found for this error!");
@@ -139,6 +143,12 @@ pub mod dataBased{
             println!("Author => {:?}", self.getAuthor());
             println!("Metadata => {:?}", self.getMetadata());
             println!("Databases => {:?}", self.getDBNames());
+            for (k,v) in &self.database{
+
+                let x = v;
+                x.print();
+
+            }
 
         }
 
@@ -158,9 +168,9 @@ pub mod dataBased{
 
         }
 
-        pub fn fetchDB(&self)-> &HashMap<String,Db>{
+        pub fn fetchDB(&mut self)-> &mut HashMap<String,Db>{
 
-            return &self.database;
+            return &mut self.database;
 
         }
 
@@ -172,6 +182,42 @@ pub mod dataBased{
                 self.logger.update(-1,x);
                 return false;
             }
+
+        }
+
+        pub fn createTable(&mut self, DB:String, name:String, headers:String, model:String){
+
+            let check_DB = self.fetchDB_name(DB.clone());
+
+            if !check_DB{
+                return;
+            }
+
+            let mut temp = self.fetchDB();
+            let db = temp.get_mut(&DB).unwrap();
+
+            let x = headers.split(",").collect::<Vec<_>>();
+            let y= model.split(",").collect::<Vec<_>>();
+
+            let mut HEAD = Vec::new(); 
+            let mut MDL = Vec::new();
+
+            //println!("{:?}",x);
+            //println!("{:?}",y);
+
+            for i in 0..x.len(){
+                
+                HEAD.push(x[i].to_owned());
+                MDL.push(y[i].to_owned());
+
+            }
+
+            //println!("Headers => {:?}",HEAD);
+            //println!("Model => {:?}",MDL);
+
+            let ec = db.createTable(name.clone(), HEAD, MDL);
+
+            self.logger.update(ec, name.clone());
 
         }
 
@@ -194,8 +240,12 @@ pub mod dataBased{
             return &self.table;
         }
 
-        fn createTable(&mut self, x:String, y:Vec<String>, z:Vec<String>){
+        fn createTable(&mut self, x:String, y:Vec<String>, z:Vec<String>) -> i32{
             
+            if self.table.contains_key(&x){
+                return -3;
+            }
+
             let mut v= Table{
                 name:x.clone(),
                 headers:y,
@@ -205,6 +255,26 @@ pub mod dataBased{
             };
 
             let _ = self.table.insert(x, v);
+            return 3;
+
+        }
+
+        fn print(&self){
+            let num = rand::thread_rng().gen_range(0..9);
+            let mut name = String::from(" ");
+            name.push_str(self.getName());
+            name.push_str(" ");
+            match num {
+                //need to improve this piece of shit, too many repitions.
+                1 => {println!("Tables of {} => {:?} ", &name.on_truecolor(0, 128, 128), &self.table.keys());},
+                2 =>{println!("Tables of {} => {:?} ", &name.on_truecolor(128,0,128), &self.table.keys());},
+                3 =>{println!("Tables of {} => {:?} ", &name.on_truecolor(64,64,128), &self.table.keys());},
+                4 =>{println!("Tables of {} => {:?} ", &name.on_truecolor(43, 12, 28), &self.table.keys());},
+                5 =>{println!("Tables of {} => {:?} ", &name.on_truecolor(91,17,138), &self.table.keys());},
+                6 =>{println!("Tables of {} => {:?} ", &name.on_truecolor(128, 100 , 30), &self.table.keys());},
+                7 =>{println!("Tables of {} => {:?} ", &name.on_truecolor(128,64,0), &self.table.keys());},
+                _ => {println!("Tables of {} => {:?} ", &name.on_truecolor(0,64,0), &self.table.keys());},
+            }
 
         }
 
@@ -264,16 +334,12 @@ fn main() {
 
     g.addDB("Students".to_owned());
     g.addDB("Employees".to_owned());
-    g.addDB("Employees".to_owned());
     g.addDB("Najam".to_owned());
 
-    g.fetchDB_name("STD".to_owned());
-    g.fetchDB_name("FOX".to_owned());
-    g.fetchDB_name("AMPILOYEE".to_owned());
+    g.createTable("Employees".to_owned(), "SuperDB".to_owned(), "Name,CNIC,Salary".to_owned(), "String,String,Integer".to_owned());
+    g.createTable("Employees".to_owned(), "SuperDB".to_owned(), "Name,CNIC,Salary".to_owned(), "String,String,Integer".to_owned()); //Adds table to DB, Headers are Col_Names, model = datatypes of Col_Names
 
-    g.addDB("Employees".to_owned());
     g.throwUC();
-    
 
     g.print();
 
