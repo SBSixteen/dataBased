@@ -51,7 +51,7 @@ pub mod dataBased{
                     println!("{}{}| {} {} {}", " Warning ".on_bright_yellow() , e_string.to_string().on_bright_yellow() ,"Database named", &y.cyan(), "already exists in workspace!");
                 }
                 _ =>{
-                    println!("{}{}| {}", "  Undocumented Code ".on_truecolor(0,0,255), e_string.to_string().on_truecolor(0,0,255), "No definition found for this error!");
+                    println!("{}{}| {}", " Undocumented Code ".on_truecolor(0,0,255), e_string.to_string().on_truecolor(0,0,255), "No definition found for this error!");
                 }
 
 
@@ -100,6 +100,12 @@ pub mod dataBased{
         pub fn getDB(&self) -> &HashMap<String, Db>{
 
             return &self.database;
+
+        }
+
+        pub fn throwUC(&mut self){
+            //Force throws undocumented error code exception!
+            self.logger.update(-99999,"".to_owned());
 
         }
 
@@ -266,7 +272,7 @@ fn main() {
     g.fetchDB_name("AMPILOYEE".to_owned());
 
     g.addDB("Employees".to_owned());
-    
+    g.throwUC();
     
 
     g.print();
