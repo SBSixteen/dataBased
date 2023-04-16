@@ -1,9 +1,7 @@
-pub mod dataBased_Logger{
-
-}
+use dataBased::generateSession;
 pub mod dataBased{
     
-    use std::{collections::HashMap, hash::Hash, fmt::Error};
+    use std::{collections::HashMap, hash::Hash, fmt::Error, io::{self, stdout, Write}};
 
     use chrono::Utc;
     use colored::Colorize;
@@ -53,6 +51,21 @@ pub mod dataBased{
                 }
                 -3 =>{
                     println!("{}{}| {} {} {}", " Warning ".on_bright_yellow() , e_string.to_string().on_bright_yellow() ,"Table named", &y.cyan(), "already exists in this database!");
+                }
+                -4 =>{
+                    println!("{}{}| {} {} {}", " Warning ".on_bright_yellow() , e_string.to_string().on_bright_yellow() ,"Cannot create database ", &y.cyan(), "as no workspace is set in session!");
+                }
+                -1000  =>{
+                    println!("{}{}| {} {} {}", " Warning ".on_bright_yellow() , e_string.to_string().on_bright_yellow() ,"Command", &y.cyan(), "does not exist!");
+                }
+                -1001  =>{
+                    println!("{}{}| {}", " Warning ".on_bright_yellow() , e_string.to_string().on_bright_yellow() ,"No Command typed.");
+                }
+                -1002  =>{
+                    println!("{}{}| {} {} {}", " Warning ".on_bright_yellow() , e_string.to_string().on_bright_yellow() ,"Workspace", &y.cyan(), "already exists in current session!");
+                }
+                -1002  =>{
+                    println!("{}{}| {} {} {}", " Warning ".on_bright_yellow() , e_string.to_string().on_bright_yellow() ,"Workspace", &y.cyan(), "does not exist in current session!");
                 }
                 _ =>{
                     println!("{}{}| {}", " Undocumented Code ".on_truecolor(0,0,255), e_string.to_string().on_truecolor(0,0,255), "No definition found for this error!");
@@ -122,6 +135,10 @@ pub mod dataBased{
             let g = &self.database;
 
             let mut x = String::from("[");
+
+            if g.len() == 0{
+                return String::from("[]")
+            }
 
             for (k,v) in g{
 
@@ -326,22 +343,224 @@ pub mod dataBased{
         return L;
     }
 
+    fn looper() { // Not a movie reference
+
+    }
+
+    pub fn generateSession(){
+
+        println!("");
+        println!("{} : {} ", " dataBased ".on_white(), " Version 0.1 ".magenta());
+        let mut workspaces: HashMap<String, Workspace>= HashMap::new();
+        println!("Live session started: {}", &Utc::now().to_string());
+        println!("");
+        print!("Session Name? => ");
+        io::stdout().flush().unwrap();
+        
+        let mut input = String::from("");
+        let mut dir = String::new();
+        let mut session_name = String::from("");
+
+        let mut a_ws = String::new();
+        let mut a_db = String::new();
+        let mut a_tb = String::new();
+
+        let mut b_ws = false;
+        let mut b_db = false;
+        let mut b_tb = false;
+
+        let stdin = io::stdin();
+        stdin.read_line(&mut session_name).unwrap();  
+
+        session_name = session_name[0..session_name.len()-2].to_owned();
+
+        println!("");
+        dir.push_str(&session_name);
+        
+
+
+        let mut logger = init_Logger();
+
+        loop {
+            
+            dir = String::new();
+            dir.push_str(&session_name);
+            
+            if b_ws {
+                dir.push_str(">");
+                dir.push_str(&a_ws);
+            }
+            if b_db {
+                dir.push_str(">");
+                dir.push_str(&a_db);
+            }
+            if b_tb {
+                dir.push_str(">");
+                dir.push_str(&a_tb);
+            }
+
+            input = String::new();
+            print!("{} => ", dir.green());
+            io::stdout().flush().unwrap();
+            stdin.read_line(&mut input).unwrap();
+
+            input = input[0..input.len()-2].to_owned();
+
+            let g = input.split(" ").collect::<Vec<&str>>();
+            let len = g.len();
+
+            //Filter input command by length
+            match len {
+                0=>{
+                    logger.update(-1001, input);
+                }
+                1=>{
+                    match input.to_lowercase().as_str(){
+                        "" =>{
+                            logger.update(-1001, input); //COMMAND isEmpty
+                        }
+                        "help" =>{
+                            println!("Help is on the way!")
+                        }
+                        "status"=>{
+                            for (_k,v) in &workspaces{
+                                    v.print();
+                            }
+                        }
+                        _ =>{
+                            logger.update(-1000, input); //COMMAND DNE
+                        }
+                    }
+
+                }
+                2=>{
+
+                    match g[0].to_lowercase().as_str(){
+
+                        "unset" =>{
+
+                            match g[1].to_lowercase().as_str(){
+                                "all" =>{
+                                    b_ws = false;
+                                    b_db = false;
+                                    b_tb = false;
+
+                                    a_ws = String::new();
+                                    a_db = String::new();
+                                    a_tb = String::new();
+                                }
+                                "ws" =>{
+                                    b_ws = false;
+                                    b_db = false;
+                                    b_tb = false;
+
+                                    a_ws = String::new();
+                                    a_db = String::new();
+                                    a_tb = String::new();
+                                }
+                                "db" =>{
+                                    b_db = false;
+                                    b_tb = false;
+
+                                    a_db = String::new();
+                                    a_tb = String::new();
+                                }
+                                "tb"=>{
+                                    b_tb = false;
+
+                                    a_tb = String::new();
+                                }
+                                _ =>{
+                                    logger.update(-1000, input);
+                                }
+                            }
+
+                        }
+
+                        _ =>{
+
+                        }
+
+                    }
+
+
+                }
+                3=>{
+
+                    match g[0].to_lowercase().as_str(){
+
+                        "set" =>{
+                            match g[1].to_lowercase().as_str(){
+
+                                "workspace" => {
+                                    
+                                    if workspaces.contains_key(g[2]){
+                                        b_ws = true;
+                                        a_ws = g[2].to_string();
+                                    }else{
+                                        logger.update(-1003, g[2].to_string())
+                                    }
+                                
+                                }
+                                _ =>{
+
+                                }
+                                }
+                        }
+
+                        "create" =>{
+
+                            match g[1].to_lowercase().as_str(){
+
+                                "workspace" => {
+
+                                    if !workspaces.contains_key(g[2]){
+                                    workspaces.insert(g[2].to_string(),create_workspace(g[2].to_string(), session_name.clone()));
+
+                                    }else{
+                                        logger.update(-1002, g[2].to_string())
+                                    }
+
+
+                                }
+                                "database" =>{
+                                    if !b_ws{
+                                        logger.update(-4, g[2].to_owned())
+                                    }else{
+                                        let active = workspaces.get_mut(&a_ws).unwrap();
+                                        active.addDB(g[2].to_string()) 
+                                    }
+                                }
+                                _ =>{
+                                    logger.update(-1000, g[1].to_string())
+                                }
+
+
+
+                            }
+
+                        }
+                        _ =>{
+
+                        }
+
+                    }
+
+                }
+                _ =>{
+                    logger.update(-1000, input);
+                }
+
+            }
+
+            println!()
+
+        }
+
+    }
+
 }
 
 fn main() {
-
-    let mut g = dataBased::create_workspace("HolyDB".to_owned(), "Nabeel Mirza".to_owned());
-
-    g.addDB("Students".to_owned());
-    g.addDB("Employees".to_owned());
-    g.addDB("Najam".to_owned());
-
-    g.createTable("Employees".to_owned(), "SuperDB".to_owned(), "Name,CNIC,Salary".to_owned(), "String,String,Integer".to_owned());
-    g.createTable("Employees".to_owned(), "SuperDB".to_owned(), "Name,CNIC,Salary".to_owned(), "String,String,Integer".to_owned()); //Adds table to DB, Headers are Col_Names, model = datatypes of Col_Names
-
-    g.throwUC();
-
-    g.print();
-
- 
+    generateSession();
 }
