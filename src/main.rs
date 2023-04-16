@@ -67,7 +67,7 @@ pub mod dataBased{
                 -1002  =>{
                     println!("{}{}| {} {} {}", " Warning ".on_bright_yellow() , e_string.to_string().on_bright_yellow() ,"Workspace", &y.cyan(), "already exists in current session!");
                 }
-                -1002  =>{
+                -1003 =>{
                     println!("{}{}| {} {} {}", " Warning ".on_bright_yellow() , e_string.to_string().on_bright_yellow() ,"Workspace", &y.cyan(), "does not exist in current session!");
                 }
                 _ =>{
@@ -586,4 +586,5 @@ fn main() {
     for i in z{
         println!("{:?}", i);
     }
+    
 }
