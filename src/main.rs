@@ -1,4 +1,7 @@
 use dataBased::generateSession;
+use std::fmt::Debug;
+
+
 pub mod dataBased{
     
     use std::{collections::HashMap, hash::Hash, fmt::Error, io::{self, stdout, Write}};
@@ -313,6 +316,7 @@ pub mod dataBased{
         table_name:String,
         col_name:String
     }
+    
     pub fn create_workspace(x:String, y:String) -> Workspace{
 
         let mut meta = String::from("");
@@ -426,6 +430,10 @@ pub mod dataBased{
                             for (_k,v) in &workspaces{
                                     v.print();
                             }
+                        }
+                        "exit" =>{
+                            break;
+                            //println!("Help is on the way!")
                         }
                         _ =>{
                             logger.update(-1000, input); //COMMAND DNE
@@ -563,4 +571,19 @@ pub mod dataBased{
 
 fn main() {
     generateSession();
+
+    let mut x = Vec::new();
+    let mut y =  Vec::new();
+
+    x.push(1);
+    y.push("Moosa");
+
+    let mut z: Vec<Box<dyn Debug>> = Vec::new();
+
+    z.push(Box::new(x));
+    z.push(Box::new(y));
+
+    for i in z{
+        println!("{:?}", i);
+    }
 }
