@@ -5,7 +5,7 @@ pub mod dataBased {
 
     use std::{
         collections::HashMap,
-        fmt::Error,
+        fmt::{Error, Debug},
         hash::Hash,
         io::{self, stdout, Write},
     };
@@ -60,7 +60,7 @@ pub mod dataBased {
                 -2 => {
                     println!(
                         "{}{}| {} {} {}",
-                        " Warning ".on_bright_yellow(),
+                        " Warning Code ".on_bright_yellow(),
                         e_string.to_string().on_bright_yellow(),
                         "Database named",
                         &y.cyan(),
@@ -70,7 +70,7 @@ pub mod dataBased {
                 -3 => {
                     println!(
                         "{}{}| {} {} {}",
-                        " Warning ".on_bright_yellow(),
+                        " Warning Code ".on_bright_yellow(),
                         e_string.to_string().on_bright_yellow(),
                         "Table named",
                         &y.cyan(),
@@ -80,17 +80,37 @@ pub mod dataBased {
                 -4 => {
                     println!(
                         "{}{}| {} {} {}",
-                        " Warning ".on_bright_yellow(),
+                        " Warning Code ".on_bright_yellow(),
                         e_string.to_string().on_bright_yellow(),
                         "Cannot create database ",
                         &y.cyan(),
                         "as no workspace is set in session!"
                     );
                 }
+                -5 => {
+                    println!(
+                        "{}{}| {} {} {}",
+                        " Error Code ".on_bright_yellow(),
+                        e_string.to_string().on_bright_yellow(),
+                        "Cannot create table ",
+                        &y.cyan(),
+                        "as there are more columns than their assigned datatypes!"
+                    );
+                }
+                -6 => {
+                    println!(
+                        "{}{}| {} {} {}",
+                        " Error Code ".on_bright_yellow(),
+                        e_string.to_string().on_bright_yellow(),
+                        "Cannot create table ",
+                        &y.cyan(),
+                        "as there are more assigned datatypes than their columns!"
+                    );
+                }
                 -1000 => {
                     println!(
                         "{}{}| {} {} {}",
-                        " Warning ".on_bright_yellow(),
+                        " Warning Code ".on_bright_yellow(),
                         e_string.to_string().on_bright_yellow(),
                         "Command",
                         &y.cyan(),
@@ -100,7 +120,7 @@ pub mod dataBased {
                 -1001 => {
                     println!(
                         "{}{}| {}",
-                        " Warning ".on_bright_yellow(),
+                        " Warning Code ".on_bright_yellow(),
                         e_string.to_string().on_bright_yellow(),
                         "No Command typed."
                     );
@@ -108,22 +128,15 @@ pub mod dataBased {
                 -1002 => {
                     println!(
                         "{}{}| {} {} {}",
-                        " Warning ".on_bright_yellow(),
+                        " Warning Code ".on_bright_yellow(),
                         e_string.to_string().on_bright_yellow(),
                         "Workspace",
                         &y.cyan(),
                         "already exists in current session!"
                     );
                 }
-                -1003 => {
-                    println!(
-                        "{}{}| {} {} {}",
-                        " Warning ".on_bright_yellow(),
-                        e_string.to_string().on_bright_yellow(),
-                        "Workspace",
-                        &y.cyan(),
-                        "does not exist in current session!"
-                    );
+                -1003  =>{
+                    println!("{}{}| {} {} {}", " Warning Code ".on_bright_yellow() , e_string.to_string().on_bright_yellow() ,"Workspace", &y.cyan(), "does not exist in current session!");
                 }
                 _ => {
                     println!(
@@ -293,9 +306,9 @@ pub mod dataBased {
 
             let mut v = Table {
                 name: x.clone(),
-                headers: y,
                 model: z,
-                cells: Vec::new(),
+                order:y,
+                cells: HashMap::new(),
                 relations: Vec::new(),
             };
 
@@ -373,9 +386,9 @@ pub mod dataBased {
     #[derive(Debug)]
     pub struct Table {
         name: String,
-        headers: Vec<String>,
         model: Vec<String>,
-        cells: Vec<Vec<String>>,
+        order: Vec<String>,
+        cells: HashMap<String, Vec<Box<dyn Debug>>>,
         relations: Vec<Relation>,
     }
 
@@ -552,6 +565,37 @@ pub mod dataBased {
                                 logger.update(-1003, g[2].to_string())
                             }
                         }
+                        "database" => {
+                            if b_ws {
+
+                                let ws = workspaces.get(&a_ws).unwrap();
+                                if ws.database.contains_key(g[2]){
+                                    b_db = true;
+                                    a_db = g[2].to_string();
+                                }else{
+                                    logger.update(-1005, g[2].to_string())
+                                }
+
+                            } else {
+                                logger.update(-1004, g[2].to_string())
+                            }
+                        }
+                        "table" => {
+                            if b_db && b_ws {
+
+                                let ws = workspaces.get(&a_ws).unwrap();
+                                let db = ws.database.get(&a_db).unwrap();
+                                if db.table.contains_key(g[2]){
+                                    b_tb = true;
+                                    a_tb = g[2].to_string();
+                                }else{
+                                    logger.update(-1005, g[2].to_string())
+                                }
+
+                            } else {
+                                logger.update(-1004, g[2].to_string())
+                            }
+                        }
                         _ => {}
                     },
 
@@ -574,12 +618,152 @@ pub mod dataBased {
                                 active.addDB(g[2].to_string())
                             }
                         }
+
                         _ => logger.update(-1000, g[1].to_string()),
                     },
                     _ => {}
                 },
-                _ => {
-                    logger.update(-1000, input);
+                4=>{
+
+                }
+
+                5=>{
+                    
+                    match g[0].to_lowercase().as_str(){
+
+                        "create"=>{
+
+                            match g[1].to_lowercase().as_str(){
+                                
+                                "table"=>{
+
+                                    let x = g[3].split(":").collect::<Vec<&str>>();
+                                    let y = g[4].split(":").collect::<Vec<&str>>();
+
+                                    if x.len() != y.len(){
+                                        if x.len() > y.len(){
+                                            logger.update(-5, g[2].to_owned());
+                                        }else{
+                                            logger.update(-6,g[2].to_owned());
+                                        }
+                                    }else{
+
+                                        let mut count = 0;
+
+                                        for i in 0..y.len(){
+
+                                            match y[i].to_lowercase().as_str(){
+
+                                                "integer"=>{
+                                                    count+=1;
+                                                }
+                                                "int"=>{
+                                                    count+=1;
+                                                }
+                                                "i32"=>{
+                                                    count+=1;
+                                                }
+                                                "number"=>{
+                                                    count+=1;
+                                                }
+                                                "string"=>{
+                                                    count+=1;
+                                                }
+                                                "word"=>{
+                                                    count+=1;
+                                                }
+                                                "str"=>{
+                                                    count+=1;
+                                                }
+                                                "char"=>{
+                                                    count+=1;
+                                                }
+                                                "letter"=>{
+                                                    count+=1;
+                                                }
+                                                "float"=>{
+                                                    count+=1;
+                                                }
+                                                "f64"=>{
+                                                    count+=1;
+                                                }
+                                                "f64"=>{
+                                                    count+=1;
+                                                }
+                                                "bool"=>{
+                                                    count+=1;
+                                                }
+                                                "boolean"=>{
+                                                    count+=1;
+                                                }
+                                                _=>{
+                                                    logger.update(-7, g[2].to_owned());
+                                                }
+
+                                            }
+
+                                        }
+
+                                        if count == x.len(){                                        
+                                            
+                                            let mut types = Vec::new();
+                                            let mut orders = Vec::new();
+                                            let mut data : HashMap<String, Vec<Box<dyn Debug>>> = HashMap::new();
+                                           
+                                            for i in 0..y.len(){
+                                                types.push(y[i].to_owned());
+                                                orders.push(x[i].to_owned());
+                                                data.insert(x[i].to_owned(), Vec::new());
+                                            }
+                                            
+                                            if b_ws{
+                                                let mut k = workspaces.get_mut(&a_ws).unwrap();
+                                                if b_db{
+
+                                                    let mut d = k.database.get_mut(&a_db).unwrap(); 
+
+                                                    let mut instance = Table{
+                                                        name:g[2].to_owned(),
+                                                        model:types,
+                                                        order:orders,
+                                                        cells:data,
+                                                        relations:Vec::new()
+                                                    };
+
+                                                    d.table.insert(g[2].to_string(), instance);
+
+                                                }else{
+                                                    logger.update(-9, g[2].to_owned())
+                                                }
+                                        }else{
+                                            logger.update(-10, g[2].to_owned());
+                                        }
+
+                                        }
+                                        else{
+                                            logger.update(-8,g[2].to_owned());
+                                        }
+
+                                    }
+
+                                }
+                                _ =>{
+                                    logger.update(-1000, "".to_owned());
+                                }
+                            }
+
+                            
+
+                        }
+                        _=>{
+                            logger.update(-1000, "".to_owned());
+                        }
+
+                    }
+
+                }
+                _=>{
+                    logger.update(-1000, "".to_owned())
                 }
             }
 
@@ -587,6 +771,7 @@ pub mod dataBased {
         }
     }
 }
+
 
 fn main() {
     //generateSession();
@@ -613,9 +798,14 @@ fn main() {
 
     // Push additional values into `y`
     z.get_mut("Age").unwrap().push(Box::new(22));
+    z.get_mut("Age").unwrap().push(Box::new("Nabeel"));
+    z.get_mut("Age").unwrap().push(Box::new(66));
 
     for (tableName, vec) in &z {
         println!("{}: {:?}", tableName, vec);
     }
+
+    let x = z.get("Age").unwrap();
+    println!("{:?}", x.get(2).unwrap());
 
 }
