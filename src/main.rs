@@ -589,9 +589,9 @@ pub mod dataBased {
 }
 
 fn main() {
-    //generateSession();
+    generateSession();
 
-    let mut Names= Vec::new();
+    /*     let mut Names= Vec::new();
     let mut Age = Vec::new();
 
     Names.push("Moosa Hashim");
@@ -616,6 +616,6 @@ fn main() {
 
     for (tableName, vec) in &z {
         println!("{}: {:?}", tableName, vec);
-    }
+    } */
 
 }
