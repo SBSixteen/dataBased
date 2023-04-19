@@ -10,7 +10,7 @@ pub mod dataBased {
         io::{self, stdout, Write},
     };
 
-    use chrono::Utc;
+    use chrono::{Utc, Local};
     use colored::Colorize;
     use rand::Rng;
 
@@ -18,6 +18,38 @@ pub mod dataBased {
     struct Logger {
         code: Vec<i32>,
         positives: bool,
+    }
+
+    #[derive(Debug)]
+    pub struct Workspace {
+        name: String,
+        author: String,
+        metadata: String,
+        database: HashMap<String, Db>,
+        logger: Logger,
+    }
+
+    #[derive(Debug)]
+    pub struct Db {
+        name: String,
+        table: HashMap<String, Table>,
+    }
+    
+    #[derive(Debug)]
+    pub struct Table {
+        name: String,
+        model: Vec<String>,
+        order: Vec<String>,
+        cells: HashMap<String, Vec<Box<dyn Debug>>>,
+        rows: i32,
+        relations: Vec<Relation>,
+    }
+
+    #[derive(Debug)]
+    pub struct Relation {
+        table_name: String,
+        col_name: String,
+        
     }
 
     impl Logger {
@@ -107,6 +139,56 @@ pub mod dataBased {
                         "as there are more assigned datatypes than their columns!"
                     );
                 }
+                -7 => {
+                    println!(
+                        "{}{}| {} {} {}",
+                        " Error Code ".on_bright_yellow(),
+                        e_string.to_string().on_bright_yellow(),
+                        "Cannot create table as",
+                        &y.cyan(),
+                        "is an invalid datatype!"
+                    );
+                }
+                -8 => {
+                    println!(
+                        "{}{}| {} {} {}",
+                        " Error Code ".on_bright_yellow(),
+                        e_string.to_string().on_bright_yellow(),
+                        "Cannot create table ",
+                        &y.cyan(),
+                        "as there are invalid datatypes declared!"
+                    );
+                }
+                -9 => {
+                    println!(
+                        "{}{}| {} {} {}",
+                        " Error Code ".on_bright_yellow(),
+                        e_string.to_string().on_bright_yellow(),
+                        "Cannot create table",
+                        &y.cyan(),
+                        "as there is no database set in the current session!"
+                    );
+                }
+                -10 => {
+                    println!(
+                        "{}{}| {} {} {}",
+                        " Error Code ".on_bright_yellow(),
+                        e_string.to_string().on_bright_yellow(),
+                        "Cannot create table",
+                        &y.cyan(),
+                        "as there is no workspace set in the current session!"
+                    );
+                }
+                -11 => {
+                    println!(
+                        "{}{}| {} {} {}",
+                        " Error Code ".on_bright_yellow(),
+                        e_string.to_string().on_bright_yellow(),
+                        "Cannot create table ",
+                        &y.cyan(),
+                        "as there are more assigned datatypes than their columns!"
+                    );
+                }
                 -1000 => {
                     println!(
                         "{}{}| {} {} {}",
@@ -138,6 +220,22 @@ pub mod dataBased {
                 -1003  =>{
                     println!("{}{}| {} {} {}", " Warning Code ".on_bright_yellow() , e_string.to_string().on_bright_yellow() ,"Workspace", &y.cyan(), "does not exist in current session!");
                 }
+                -1004  =>{
+                    println!("{}{}| {} {} {}", " Warning Code ".on_bright_yellow() , e_string.to_string().on_bright_yellow() ,"Database", &y.cyan(), "does not exist in current session!");
+                }
+                -1005  =>{
+                    println!("{}{}| {} {} {}", " Warning Code ".on_bright_yellow() , e_string.to_string().on_bright_yellow() ,"Table", &y.cyan(), "does not exist in current session!");
+                }
+                -1007  =>{
+                    println!("{}{}| {} {} {}", " Warning Code ".on_bright_yellow() , e_string.to_string().on_bright_yellow() ,"Amount of fields in", &y.cyan(), "do not match the input fields");
+                }
+                -1008  =>{
+                    println!("{}{}| {} {} {}", " Warning Code ".on_bright_yellow() , e_string.to_string().on_bright_yellow() ,"There is", &y.cyan(), "no table selected in this session!");
+                }
+                -1010  =>{
+                    println!("{}{}| {} {} {}", " Warning Code ".on_bright_yellow() , e_string.to_string().on_bright_yellow() ,"There are", &y.cyan(), "zero workspaces in this session!");
+                }
+
                 _ => {
                     println!(
                         "{}{}| {}",
@@ -156,15 +254,6 @@ pub mod dataBased {
         pub fn toggle(&mut self) {
             self.positives = !self.positives;
         }
-    }
-
-    #[derive(Debug)]
-    pub struct Workspace {
-        name: String,
-        author: String,
-        metadata: String,
-        database: HashMap<String, Db>,
-        logger: Logger,
     }
 
     impl Workspace {
@@ -284,11 +373,7 @@ pub mod dataBased {
         }
     }
 
-    #[derive(Debug)]
-    pub struct Db {
-        name: String,
-        table: HashMap<String, Table>,
-    }
+
 
     impl Db {
         fn getName(&self) -> &String {
@@ -309,6 +394,7 @@ pub mod dataBased {
                 model: z,
                 order:y,
                 cells: HashMap::new(),
+                rows:0,
                 relations: Vec::new(),
             };
 
@@ -383,26 +469,12 @@ pub mod dataBased {
         }
     }
 
-    #[derive(Debug)]
-    pub struct Table {
-        name: String,
-        model: Vec<String>,
-        order: Vec<String>,
-        cells: HashMap<String, Vec<Box<dyn Debug>>>,
-        relations: Vec<Relation>,
-    }
-
-    #[derive(Debug)]
-    pub struct Relation {
-        table_name: String,
-        col_name: String,
-    }
-
     pub fn create_workspace(x: String, y: String) -> Workspace {
         let mut meta = String::from("");
 
-        meta.push_str("Date Created : ");
-        meta.push_str(&Utc::now().to_string());
+        meta.push_str("Date Created : ");        
+
+        meta.push_str(&Local::now().to_string());
 
         let x = Workspace {
             name: x,
@@ -435,7 +507,7 @@ pub mod dataBased {
             " Version 0.1 ".magenta()
         );
         let mut workspaces: HashMap<String, Workspace> = HashMap::new();
-        println!("Live session started: {}", &Utc::now().to_string());
+        println!("Live session started: {}", &Local::now().to_string());
         println!("");
         print!("Session Name? => ");
         io::stdout().flush().unwrap();
@@ -502,9 +574,39 @@ pub mod dataBased {
                         "help" => {
                             println!("Help is on the way!")
                         }
+                        "print" =>{
+
+                            if b_tb{
+                                let temp = workspaces.get(&a_ws).unwrap().database.get(&a_db).unwrap().table.get(&a_tb).unwrap();
+                                println!("{:?}", temp.order);
+                                let len = temp.rows;
+                                let order = &temp.order;
+
+                                for i in 0 as usize..len as usize{
+                                    print!("{} => ", i);
+
+                                    for j in order{
+
+                                        let temp_hs = temp.cells.get(j).unwrap();
+                                        print!("{:?}, ", temp_hs[i]);
+
+                                    }
+                                    println!();
+
+                                }
+                                
+
+                            }else{
+                                logger.update(-1008, "".to_owned());
+                            }
+                        }
                         "status" => {
                             for (_k, v) in &workspaces {
                                 v.print();
+                            }
+
+                            if workspaces.len() == 0 {
+                                logger.update(-1010, "".to_owned());
                             }
                         }
                         "exit" => {
@@ -549,13 +651,139 @@ pub mod dataBased {
                             a_tb = String::new();
                         }
                         _ => {
-                            logger.update(-1000, input);
+                            logger.update(-1011, input);
                         }
                     },
 
                     _ => {}
                 },
                 3 => match g[0].to_lowercase().as_str() {
+                    "insert" => match g[1].to_lowercase().as_str() {
+                        "record" => {
+
+                            let temp = g[2].split(":").collect::<Vec<&str>>(); 
+                            if temp.len() != workspaces.get(&a_ws).unwrap().database.get(&a_db).unwrap().table.get(&a_tb).unwrap().model.len() {
+                                //println!("{}","Error: Record length does not match table model".red());
+                                logger.update(-1007, a_tb.to_owned());
+                                continue;
+                            }
+
+                            let mut tb = workspaces.get_mut(&a_ws).unwrap().database.get_mut(&a_db).unwrap().table.get_mut(&a_tb).unwrap();
+                            
+                            let order = tb.order.clone();
+                            let model = tb.model.clone();
+                            let cells = &mut tb.cells;
+                            let rows = tb.rows;
+
+                            let len = model.clone().len() as usize;
+                            //datacheck
+
+
+                            for i in 0..len{
+
+                                let mut t = cells.get_mut(&order[i]).unwrap(); 
+                                let datatype = model[i].clone().to_lowercase();
+
+                                match datatype.as_str(){
+
+                                    "string" => {
+                                        t.push(Box::new(temp[i].to_owned()));
+                                    }
+                                    "i32" => {
+                                        t.push(Box::new(temp[i].parse::<i32>().unwrap()));
+                                    }
+                                    "integer" => {
+                                        t.push(Box::new(temp[i].parse::<i32>().unwrap()));
+                                    }
+                                    "i64" => {
+                                        t.push(Box::new(temp[i].parse::<i64>().unwrap()));
+                                    }
+                                    "f32" => {
+                                        t.push(Box::new(temp[i].parse::<f32>().unwrap()));
+                                    }
+                                    "float" => {
+                                        t.push(Box::new(temp[i].parse::<f64>().unwrap()));
+                                    }
+                                    "bool" => {
+                                        t.push(Box::new(temp[i].parse::<bool>().unwrap()));
+                                    }
+                                    "boolean" => {
+                                        t.push(Box::new(temp[i].parse::<bool>().unwrap()));
+                                    }
+
+                                    _=>{
+
+                                    }
+
+                                }                               
+
+                            }
+
+                            tb.rows += 1;
+
+
+                            /* 
+                            if b_tb {
+                                let ws = workspaces.get(&a_ws).unwrap();
+                                let db = ws.database.get(&a_db).unwrap();
+                                let tb = db.table.get(&a_tb).unwrap();
+
+                                let mut record: HashMap<String, Box<dyn Debug>> = HashMap::new();
+
+                                for (k, v) in &tb.cells {
+                                    let mut input = String::new();
+                                    print!("{} => ", k.green());
+                                    io::stdout().flush().unwrap();
+                                    stdin.read_line(&mut input).unwrap();
+
+                                    input = input[0..input.len() - 2].to_owned();
+
+                                    let mut cell: Box<dyn Debug> = Box::new(input);
+
+                                    match v[0].downcast_ref::<String>() {
+                                        Some(_x) => {
+                                            cell = Box::new(input);
+                                        }
+                                        None => {
+                                            match v[0].downcast_ref::<i32>() {
+                                                Some(_x) => {
+                                                    cell = Box::new(input.parse::<i32>().unwrap());
+                                                }
+                                                None => {
+                                                    match v[0].downcast_ref::<f32>() {
+                                                        Some(_x) => {
+                                                            cell = Box::new(input.parse::<f32>().unwrap());
+                                                        }
+                                                        None => {
+                                                            match v[0].downcast_ref::<bool>() {
+                                                                Some(_x) => {
+                                                                    cell = Box::new(input.parse::<bool>().unwrap());
+                                                                }
+                                                                None => {}
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    record.insert(k.to_string(), cell);
+                                }
+
+                                let mut tb = workspaces.get_mut(&a_ws).unwrap().database.get_mut(&a_db).unwrap().table.get_mut(&a_tb).unwrap();
+
+                                for (k, v) in &record {
+                                    tb.cells.get_mut(k).unwrap().push(v);
+                                }
+                            } else {
+                                logger.update(-1006, input);
+                            }  */ 
+                        }
+                        _=>{
+
+                        }
+                    }
                     "set" => match g[1].to_lowercase().as_str() {
                         "workspace" => {
                             if workspaces.contains_key(g[2]) {
@@ -573,11 +801,11 @@ pub mod dataBased {
                                     b_db = true;
                                     a_db = g[2].to_string();
                                 }else{
-                                    logger.update(-1005, g[2].to_string())
+                                    logger.update(-1004, g[2].to_string())
                                 }
 
                             } else {
-                                logger.update(-1004, g[2].to_string())
+                                logger.update(-1003, "".to_string())
                             }
                         }
                         "table" => {
@@ -618,13 +846,14 @@ pub mod dataBased {
                                 active.addDB(g[2].to_string())
                             }
                         }
+                    
 
                         _ => logger.update(-1000, g[1].to_string()),
                     },
                     _ => {}
                 },
                 4=>{
-
+                    
                 }
 
                 5=>{
@@ -727,6 +956,7 @@ pub mod dataBased {
                                                         model:types,
                                                         order:orders,
                                                         cells:data,
+                                                        rows:0,
                                                         relations:Vec::new()
                                                     };
 
@@ -774,38 +1004,14 @@ pub mod dataBased {
 
 
 fn main() {
+    
     generateSession();
 
-    /*     let mut Names= Vec::new();
-    let mut Age = Vec::new();
-
-    Names.push("Moosa Hashim");
-    Age.push(22);
-
-    let mut z: HashMap<String, Vec<Box<dyn Debug>>> = HashMap::new();
-
-    z.insert(
-        String::from("Names"),
-        Names.iter().map(|&n| Box::new(n) as Box<dyn Debug>).collect(),
-    );
-    z.insert(
-        String::from("Age"),
-        Age.iter().map(|&s| Box::new(s) as Box<dyn Debug>).collect(),
-    );
-
-    // Push additional values into `x`
-    z.get_mut("Names").unwrap().push(Box::new("Nabeel Mirza"));
-
-    // Push additional values into `y`
-    z.get_mut("Age").unwrap().push(Box::new(22));
-    z.get_mut("Age").unwrap().push(Box::new("Nabeel"));
-    z.get_mut("Age").unwrap().push(Box::new(66));
-
-    for (tableName, vec) in &z {
-        println!("{}: {:?}", tableName, vec);
-    } */
-
-    let x = z.get("Age").unwrap();
-    println!("{:?}", x.get(2).unwrap());
-
 }
+
+fn reverse(input: &str) -> String {
+    let mut chars: Vec<char> = input.chars().collect();
+    chars.reverse();
+    chars.into_iter().collect()
+}
+
