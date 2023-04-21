@@ -1,5 +1,5 @@
 use dataBased::generateSession;
-use std::{collections::HashMap, fmt::Debug};
+use std::{collections::HashMap, fmt::Debug, fs};
 
 pub mod dataBased {
 
@@ -7,7 +7,7 @@ pub mod dataBased {
         collections::HashMap,
         fmt::{Error, Debug},
         hash::Hash,
-        io::{self, stdout, Write},
+        io::{self, stdout, Write}, fs,
     };
 
     use chrono::{Utc, Local};
@@ -189,6 +189,33 @@ pub mod dataBased {
                         "as there are more assigned datatypes than their columns!"
                     );
                 }
+
+                -12 => {
+                    println!(
+                        "{}{}| {}",
+                        " Error Code ".on_bright_yellow(),
+                        e_string.to_string().on_bright_yellow(),
+                        "No workspace set in this session!",
+                    );
+                }
+
+                -13 => {
+                    println!(
+                        "{}{}| {}",
+                        " Error Code ".on_bright_yellow(),
+                        e_string.to_string().on_bright_yellow(),
+                        "No database set in this session!",
+                    );
+                }
+                -14 => {
+                    println!(
+                        "{}{}| {}",
+                        " Error Code ".on_bright_yellow(),
+                        e_string.to_string().on_bright_yellow(),
+                        "No table set in this session!",
+                    );
+                }
+
                 -1000 => {
                     println!(
                         "{}{}| {} {} {}",
@@ -234,6 +261,9 @@ pub mod dataBased {
                 }
                 -1010  =>{
                     println!("{}{}| {} {} {}", " Warning Code ".on_bright_yellow() , e_string.to_string().on_bright_yellow() ,"There are", &y.cyan(), "zero workspaces in this session!");
+                }
+                -1011  =>{
+                    println!("{}{}| {} {} {}", " Error Code ".on_bright_yellow() , e_string.to_string().on_bright_yellow() ,"Export type", &y.cyan(), "is not supportd by dataBased!");
                 }
 
                 _ => {
@@ -654,12 +684,169 @@ pub mod dataBased {
                             logger.update(-1011, input);
                         }
                     },
+                    "export"=> {
+                        
+                        let mut count =0;
 
+                        if !b_ws{
+
+                            logger.update(-12, "".to_owned());
+                            count+=1;
+                        }
+                        if !b_db{
+
+                            logger.update(-13, "".to_owned());
+                            count+=1;
+                        }
+                        if !b_tb{
+
+                            logger.update(-14, "".to_owned());
+                            count+=1;
+                        }
+
+                        if count!=0{
+                            continue;
+                        }
+
+                        match g[1].to_lowercase().as_str() {
+
+                        "json" =>{
+
+                            let mut data = String::from("[ \r\n");
+
+                            let temp = workspaces.get(&a_ws).unwrap().database.get(&a_db).unwrap().table.get(&a_tb).unwrap();
+                            let mut vec = Vec::new();
+
+                            for i in &temp.order{
+                                vec.push(temp.cells.get(i.as_str()).unwrap());
+                            }
+
+
+
+                            for i in 0 as usize..temp.rows as usize{
+                                data.push_str("{ \r\n");
+                                for j in 0..vec.len(){
+
+                                    data.push_str(r#"""#);
+                                    data.push_str(&temp.order[j]);
+                                    data.push_str(r#"""#);
+                                    data.push_str(":");
+                                    let x = vec[j].get(i).unwrap();
+                                    data.push_str(&format!("{:?}",x));
+                                    if j != vec.len()-1{
+                                    data.push_str(",");
+                                    }
+                                    data.push_str("\r\n");
+                                }
+
+
+                                if i == temp.rows as usize -1{
+                                    data.push_str("} \r\n");
+                                }else{
+                                    data.push_str("}, \r\n");
+                                }
+                            }
+
+                            data.push_str("\r\n ]");
+
+                            let mut path = String::from("./");
+                            path.push_str(&a_tb);
+                            path.push_str(".js");
+
+                            fs::write(&path, data).expect("Unable to write file");
+                        }
+
+                        "xml"=>{
+                            
+                            let mut data = String::from("<");
+                            data.push_str(&a_tb);
+                            data.push_str("> \r\n");
+
+                            let temp = workspaces.get(&a_ws).unwrap().database.get(&a_db).unwrap().table.get(&a_tb).unwrap();
+                            let mut vec = Vec::new();
+
+                            for i in &temp.order{
+                                vec.push(temp.cells.get(i.as_str()).unwrap());
+                            }
+
+                            for i in 0 as usize..temp.rows as usize{
+                                data.push_str("<Record");
+                                for j in 0..vec.len(){
+
+                                    data.push_str(" ");
+                                    data.push_str(&temp.order[j]);
+                                    data.push_str("=");
+                                    let x = vec[j].get(i).unwrap();
+                                    data.push_str(&format!("{:?}",x));
+                                }
+
+                                    data.push_str("/> \r\n");
+
+                            }
+
+                            data.push_str("<");
+                            data.push_str(&a_tb);
+                            data.push_str("/>");
+
+                            let mut path = String::from("./");
+                            path.push_str(&a_tb);
+                            path.push_str(".xml");
+
+                            fs::write(&path, data).expect("Unable to write file");
+
+                        }
+
+                        "csv"=>{
+                            
+                            let mut data = String::from("");
+
+                            let temp = workspaces.get(&a_ws).unwrap().database.get(&a_db).unwrap().table.get(&a_tb).unwrap();
+                            let mut vec = Vec::new();
+
+                            for i in &temp.order{
+                                vec.push(temp.cells.get(i.as_str()).unwrap());
+                            }
+
+                            for i in 0 as usize..temp.rows as usize{
+                                for j in 0..vec.len(){
+                                    
+                                    let x = vec[j].get(i).unwrap();
+                                    data.push_str(&format!(r#"{:?}"#,x));
+                                    if j != vec.len()-1{
+                                    data.push_str(",");
+                                    }
+                                }
+
+                                    data.push_str("\r\n");
+
+                            }
+
+                            let mut path = String::from("./");
+                            path.push_str(&a_tb);
+                            path.push_str(".csv");
+
+                            fs::write(&path, data).expect("Unable to write file");
+
+                        }
+
+                        _ =>{
+
+                            logger.update(-1013,g[1].to_string());
+
+                        }}
+                        
+
+                    },
                     _ => {}
                 },
                 3 => match g[0].to_lowercase().as_str() {
                     "insert" => match g[1].to_lowercase().as_str() {
                         "record" => {
+
+                            if !b_tb{
+                                logger.update(-14, "".to_owned());
+                                continue;
+                            }
 
                             let temp = g[2].split(":").collect::<Vec<&str>>(); 
                             if temp.len() != workspaces.get(&a_ws).unwrap().database.get(&a_db).unwrap().table.get(&a_tb).unwrap().model.len() {
@@ -693,6 +880,9 @@ pub mod dataBased {
                                         t.push(Box::new(temp[i].parse::<i32>().unwrap()));
                                     }
                                     "integer" => {
+                                        t.push(Box::new(temp[i].parse::<i32>().unwrap()));
+                                    }
+                                    "int" => {
                                         t.push(Box::new(temp[i].parse::<i32>().unwrap()));
                                     }
                                     "i64" => {
@@ -1007,11 +1197,6 @@ fn main() {
     
     generateSession();
 
-}
+    
 
-fn reverse(input: &str) -> String {
-    let mut chars: Vec<char> = input.chars().collect();
-    chars.reverse();
-    chars.into_iter().collect()
 }
-
