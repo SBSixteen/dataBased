@@ -7,7 +7,7 @@ pub mod dataBased {
         collections::HashMap,
         fmt::{Error, Debug},
         hash::Hash,
-        io::{self, stdout, Write}, fs,
+        io::{self, stdout, Write}, fs, any::Any,
     };
 
     use chrono::{Utc, Local};
@@ -40,7 +40,7 @@ pub mod dataBased {
         name: String,
         model: Vec<String>,
         order: Vec<String>,
-        cells: HashMap<String, Vec<Box<dyn Debug>>>,
+        cells: HashMap<String, Vec<Box<dyn Any + Send>>>, //nabeel
         rows: i32,
         relations: Vec<Relation>,
     }
@@ -604,7 +604,31 @@ pub mod dataBased {
                         "help" => {
                             println!("Help is on the way!")
                         }
-                        "print" =>{
+                        //Nabeel
+                        "print" => {
+                            if (b_tb) {
+                                let temp = workspaces.get(&a_ws).unwrap().database.get(&a_db).unwrap().table.get(&a_tb).unwrap();
+                                let order = &temp.order;
+                                let total_rows = temp.rows as usize;
+
+                                for index in 0..total_rows {
+                                    for key in order {
+                                        if let Some(value) = temp.cells.get(key).and_then(|v| v.get(index)) {
+                                            let return_value = value.downcast_ref::<String>().map(|s| s.to_string())
+                                                .or_else(|| value.downcast_ref::<i32>().map(|i| i.to_string()))
+                                                .or_else(|| value.downcast_ref::<f32>().map(|f| f.to_string()))
+                                                .or_else(|| value.downcast_ref::<bool>().map(|b| b.to_string()))
+                                                .or_else(|| value.downcast_ref::<char>().map(|c| c.to_string()))
+                                                .unwrap_or_else(|| format!("{:?}", value));
+
+                                            print!("{} : {}, ", key, return_value);
+                                        }                
+                                    }
+                                    println!();
+                                }
+                            }
+                        }
+                        /* "print" =>{
 
                             if b_tb{
                                 let temp = workspaces.get(&a_ws).unwrap().database.get(&a_db).unwrap().table.get(&a_tb).unwrap();
@@ -628,8 +652,8 @@ pub mod dataBased {
 
                             }else{
                                 logger.update(-1008, "".to_owned());
-                            }
-                        }
+                            }  
+                        } */
                         "status" => {
                             for (_k, v) in &workspaces {
                                 v.print();
@@ -684,6 +708,7 @@ pub mod dataBased {
                             logger.update(-1011, input);
                         }
                     },
+                    //insert it here
                     "export"=> {
                         
                         let mut count =0;
@@ -840,7 +865,120 @@ pub mod dataBased {
                     _ => {}
                 },
                 3 => match g[0].to_lowercase().as_str() {
-                    "insert" => match g[1].to_lowercase().as_str() {
+                    "print" => match g[1].to_lowercase().as_str() {
+                        "orderby" => {
+                            if b_tb { // if table is selected
+                                let temp = workspaces.get(&a_ws).unwrap().database.get(&a_db).unwrap().table.get(&a_tb).unwrap();
+                                let order = &temp.order;
+                                let column_name = &g[2].to_string();
+                                let mut found = false;
+
+                            for i in order {
+                                if i == column_name {
+                                    found = true;
+                                    // sort by column name (order and print)
+                                    let mut rows: Vec<_> = temp.cells.get(column_name).unwrap().iter().enumerate().collect();
+                                    rows.sort_by(|a, b| {
+                                    let a_val = a.1.downcast_ref::<String>().map(|s| s.to_string())
+                                    .or_else(|| a.1.downcast_ref::<i32>().map(|i| i.to_string()))
+                                    .or_else(|| a.1.downcast_ref::<f32>().map(|f| f.to_string()))
+                                    .or_else(|| a.1.downcast_ref::<bool>().map(|b| b.to_string()))
+                                    .or_else(|| a.1.downcast_ref::<char>().map(|c| c.to_string()))
+                                    
+                                    .unwrap_or_else(|| format!("{:?}", a.1));
+                                    let b_val = b.1.downcast_ref::<String>().map(|s| s.to_string())
+                                    .or_else(|| b.1.downcast_ref::<i32>().map(|i| i.to_string()))
+                                    .or_else(|| b.1.downcast_ref::<f32>().map(|f| f.to_string()))
+                                    .or_else(|| b.1.downcast_ref::<bool>().map(|b| b.to_string()))
+                                    .or_else(|| b.1.downcast_ref::<char>().map(|c| c.to_string()))
+                                    .unwrap_or_else(|| format!("{:?}", b.1));
+                                    a_val.cmp(&b_val)
+                                    });
+
+                                for (index, _) in rows {
+                                    println!("Row #{}:", index + 1);
+                                    for key in order {
+                                        if let Some(value) = temp.cells.get(key).and_then(|v| v.get(index)) {
+                                            let formatted_value = value.downcast_ref::<String>().map(|s| s.to_string())
+                                            .or_else(|| value.downcast_ref::<i32>().map(|i| i.to_string()))
+                                            .or_else(|| value.downcast_ref::<bool>().map(|b| b.to_string()))
+                                            .or_else(|| value.downcast_ref::<f32>().map(|f| f.to_string()))
+                                            .or_else(|| value.downcast_ref::<char>().map(|c| c.to_string()))
+                                            // Add more types if needed
+                                            .unwrap_or_else(|| format!("{:?}", value));
+
+                                            print!(" Row # {} => {}: {} ", index+1, key, formatted_value);
+                                        }
+                                    }
+                                    println!();
+                                }
+                                break;
+                                }
+                            }
+
+                                if !found {
+                                    println!("Invalid column name"); //nabeel check this
+                                }
+                            }
+                        }
+                        "orderbyrev" => { //nabeel
+                            if b_tb { // if table is selected
+                                let temp = workspaces.get(&a_ws).unwrap().database.get(&a_db).unwrap().table.get(&a_tb).unwrap();
+                                let order = &temp.order;
+                                let column_name = &g[2].to_string();
+                                let mut found = false;
+                    
+                                for i in order {
+                                    if i == column_name {
+                                        found = true;
+                                        // sort by column name (order and print)
+                                        let mut rows: Vec<_> = temp.cells.get(column_name).unwrap().iter().enumerate().collect();
+                                        rows.sort_by(|a, b| {
+                                            let a_val = a.1.downcast_ref::<String>().map(|s| s.to_string())
+                                                .or_else(|| a.1.downcast_ref::<i32>().map(|i| i.to_string()))
+                                                .or_else(|| a.1.downcast_ref::<f32>().map(|f| f.to_string()))
+                                                .or_else(|| a.1.downcast_ref::<bool>().map(|b| b.to_string()))
+                                                .or_else(|| a.1.downcast_ref::<char>().map(|c| c.to_string()))
+                                                .unwrap_or_else(|| format!("{:?}", a.1));
+                                            let b_val = b.1.downcast_ref::<String>().map(|s| s.to_string())
+                                                .or_else(|| b.1.downcast_ref::<i32>().map(|i| i.to_string()))
+                                                .or_else(|| b.1.downcast_ref::<f32>().map(|f| f.to_string()))
+                                                .or_else(|| b.1.downcast_ref::<bool>().map(|b| b.to_string()))
+                                                .or_else(|| b.1.downcast_ref::<char>().map(|c| c.to_string()))
+                                                .unwrap_or_else(|| format!("{:?}", b.1));
+                                            a_val.cmp(&b_val)
+                                        });
+                    
+                                        for (index, _) in rows.iter().rev() {
+                                            println!("Row #{}:", index + 1);
+                                            for key in order {
+                                                if let Some(value) = temp.cells.get(key).and_then(|v| v.get(*index)) {
+                                                    let formatted_value = value.downcast_ref::<String>().map(|s| s.to_string())
+                                                        .or_else(|| value.downcast_ref::<i32>().map(|i| i.to_string()))
+                                                        .or_else(|| value.downcast_ref::<bool>().map(|b| b.to_string()))
+                                                        .or_else(|| value.downcast_ref::<f32>().map(|f| f.to_string()))
+                                                        .or_else(|| value.downcast_ref::<char>().map(|c| c.to_string()))
+                                                        .unwrap_or_else(|| format!("{:?}", value));
+                    
+                                                    print!(" Row # {} => {}: {} ", index + 1, key, formatted_value);
+                                                }
+                                            }
+                                            println!();
+                                        }
+                                        break;
+                                    }
+                                }
+                    
+                                if !found {
+                                    println!("Invalid column name");
+                                }
+                            }
+                        }
+                        _ => {
+                            // Handle other print options
+                        }
+                    }
+                   "insert" => match g[1].to_lowercase().as_str() {
                         "record" => {
 
                             if !b_tb{
@@ -912,63 +1050,7 @@ pub mod dataBased {
                             tb.rows += 1;
 
 
-                            /* 
-                            if b_tb {
-                                let ws = workspaces.get(&a_ws).unwrap();
-                                let db = ws.database.get(&a_db).unwrap();
-                                let tb = db.table.get(&a_tb).unwrap();
-
-                                let mut record: HashMap<String, Box<dyn Debug>> = HashMap::new();
-
-                                for (k, v) in &tb.cells {
-                                    let mut input = String::new();
-                                    print!("{} => ", k.green());
-                                    io::stdout().flush().unwrap();
-                                    stdin.read_line(&mut input).unwrap();
-
-                                    input = input[0..input.len() - 2].to_owned();
-
-                                    let mut cell: Box<dyn Debug> = Box::new(input);
-
-                                    match v[0].downcast_ref::<String>() {
-                                        Some(_x) => {
-                                            cell = Box::new(input);
-                                        }
-                                        None => {
-                                            match v[0].downcast_ref::<i32>() {
-                                                Some(_x) => {
-                                                    cell = Box::new(input.parse::<i32>().unwrap());
-                                                }
-                                                None => {
-                                                    match v[0].downcast_ref::<f32>() {
-                                                        Some(_x) => {
-                                                            cell = Box::new(input.parse::<f32>().unwrap());
-                                                        }
-                                                        None => {
-                                                            match v[0].downcast_ref::<bool>() {
-                                                                Some(_x) => {
-                                                                    cell = Box::new(input.parse::<bool>().unwrap());
-                                                                }
-                                                                None => {}
-                                                            }
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-
-                                    record.insert(k.to_string(), cell);
-                                }
-
-                                let mut tb = workspaces.get_mut(&a_ws).unwrap().database.get_mut(&a_db).unwrap().table.get_mut(&a_tb).unwrap();
-
-                                for (k, v) in &record {
-                                    tb.cells.get_mut(k).unwrap().push(v);
-                                }
-                            } else {
-                                logger.update(-1006, input);
-                            }  */ 
+                            
                         }
                         _=>{
 
@@ -1127,7 +1209,7 @@ pub mod dataBased {
                                             
                                             let mut types = Vec::new();
                                             let mut orders = Vec::new();
-                                            let mut data : HashMap<String, Vec<Box<dyn Debug>>> = HashMap::new();
+                                            let mut data : HashMap<String, Vec<Box<dyn Any + Send>>> = HashMap::new(); //nabeel
                                            
                                             for i in 0..y.len(){
                                                 types.push(y[i].to_owned());
