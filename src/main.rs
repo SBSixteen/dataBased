@@ -7,7 +7,7 @@ pub mod dataBased {
         collections::HashMap,
         fmt::{Error, Debug},
         hash::Hash,
-        io::{self, stdout, Write}, fs,
+        io::{self, stdout, Write, Bytes}, fs,
     };
 
     use chrono::{Utc, Local};
@@ -215,6 +215,12 @@ pub mod dataBased {
                         "No table set in this session!",
                     );
                 }
+                -15  =>{
+                    println!("{}{}| {} {} {}", " Error Code ".on_bright_yellow() , e_string.to_string().on_bright_yellow() ,"Export type", &y.cyan(), "is not supportd by dataBased!");
+                }
+                -16 =>{
+                    println!("{}{}| {} {} {}", " Error Code ".on_bright_yellow() , e_string.to_string().on_bright_yellow() ,"Object Type:", &y.cyan(), "cannot be saved by dataBased!");
+                }
 
                 -1000 => {
                     println!(
@@ -261,9 +267,6 @@ pub mod dataBased {
                 }
                 -1010  =>{
                     println!("{}{}| {} {} {}", " Warning Code ".on_bright_yellow() , e_string.to_string().on_bright_yellow() ,"There are", &y.cyan(), "zero workspaces in this session!");
-                }
-                -1011  =>{
-                    println!("{}{}| {} {} {}", " Error Code ".on_bright_yellow() , e_string.to_string().on_bright_yellow() ,"Export type", &y.cyan(), "is not supportd by dataBased!");
                 }
 
                 _ => {
@@ -588,7 +591,7 @@ pub mod dataBased {
 
             input = input[0..input.len() - 2].to_owned();
 
-            let g = input.split(" ").collect::<Vec<&str>>();
+            let mut g = input.split(" ").collect::<Vec<&str>>();
             let len = g.len();
 
             //Filter input command by length
@@ -837,6 +840,18 @@ pub mod dataBased {
                         
 
                     },
+                    "save" =>
+                        match g[1].to_lowercase().as_str(){
+                            "workspace" =>{
+                                let current = workspaces.get(&a_ws).unwrap().clone();
+                                current.print();
+                            }
+
+                            _ =>{
+                                logger.update(-16, g[1].to_owned())
+                            }
+                        }
+        
                     _ => {}
                 },
                 3 => match g[0].to_lowercase().as_str() {
@@ -1017,7 +1032,16 @@ pub mod dataBased {
                         _ => {}
                     },
 
-                    "create" => match g[1].to_lowercase().as_str() {
+                    "create" => {
+                        if g[1].to_lowercase().as_str() == "db"{
+                        g[1] = "database"
+                    }
+
+                    if g[1].to_lowercase().as_str() == "ws"{
+                        g[1] = "workspace"
+                    }
+                    
+                    match g[1].to_lowercase().as_str() {
                         "workspace" => {
                             if !workspaces.contains_key(g[2]) {
                                 workspaces.insert(
@@ -1036,10 +1060,9 @@ pub mod dataBased {
                                 active.addDB(g[2].to_string())
                             }
                         }
-                    
-
                         _ => logger.update(-1000, g[1].to_string()),
-                    },
+                    }}
+
                     _ => {}
                 },
                 4=>{
@@ -1196,7 +1219,4 @@ pub mod dataBased {
 fn main() {
     
     generateSession();
-
-    
-
 }
