@@ -1,0 +1,10 @@
+﻿category,sales,price
+string,i32,i32
+electronics,200,32
+electronics,211,300
+grocery,30,200
+electronics,12312,200
+electronics,3123,30
+books,220,2
+books,220,5
+grocery,30,10

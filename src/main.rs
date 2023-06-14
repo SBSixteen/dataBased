@@ -1,13 +1,21 @@
 use dataBased::generateSession;
 use std::{collections::HashMap, fmt::Debug, fs};
 
+use std::fs::File;
+use std::io::{self, BufRead};
+use std::path::Path;
+use std::error::Error;
+
+
+
+
 pub mod dataBased {
 
     use std::{
         collections::HashMap,
         fmt::{Error, Debug},
         hash::Hash,
-        io::{self, stdout, Write}, fs, any::Any,
+        io::{self, stdout, Write, BufRead}, fs::{self, File}, any::Any, path::Path,
     };
 
     use chrono::{Utc, Local};
@@ -51,6 +59,165 @@ pub mod dataBased {
         col_name: String,
         
     }
+
+    //nabeel
+    fn apply_aggregate_function(
+        function_name: &str,
+        column_name: &str,
+        table: &Table,
+        groups: &HashMap<String, Vec<usize>>,
+    ) {
+        let column_values: Vec<String> = table.cells
+            .get(column_name)
+            .unwrap()
+            .iter()
+            .map(|v| v.downcast_ref::<String>().map(|s| s.to_string())
+                .or_else(|| v.downcast_ref::<i32>().map(|i| i.to_string()))
+                .or_else(|| v.downcast_ref::<f32>().map(|f| f.to_string()))
+                .or_else(|| v.downcast_ref::<bool>().map(|b| b.to_string()))
+                .or_else(|| v.downcast_ref::<char>().map(|c| c.to_string()))
+                .unwrap_or_else(|| format!("{:?}", v))
+            ).collect();
+    
+        for (group_value, indices) in groups {
+            match function_name {
+                "count" => {
+                    // Simply count the number of elements in the group
+                    let count = indices.len();
+                    println!("For group {}: COUNT = {}", group_value, count);
+                }
+                //the ones below only work if the column is of data type numeric
+                "sum" => {
+
+                    let sum: i32 = indices.iter()
+                        .map(|&i| column_values[i].parse::<i32>().unwrap_or(0))  // Adapt this to handle other types
+                        .sum();
+                    println!("For group {}: SUM = {}", group_value, sum);
+                }
+                "avg" => {
+
+                    let avg: f64 = indices.iter()
+                        .map(|&i| column_values[i].parse::<f64>().unwrap_or(0.0))  // Adapt this to handle other types
+                        .sum::<f64>() / indices.len() as f64;
+                    println!("For group {}: AVG = {}", group_value, avg);
+                }
+                "min" => {
+
+                    let min: i32 = indices.iter()
+                        .map(|&i| column_values[i].parse::<i32>().unwrap_or(0))  // Adapt this to handle other types
+                        .min()
+                        .unwrap_or(0);
+                    println!("For group {}: MIN = {}", group_value, min);
+                }
+                "max" => {
+
+                    let max: i32 = indices.iter()
+                        .map(|&i| column_values[i].parse::<i32>().unwrap_or(0))  // Adapt this to handle other types
+                        .max()
+                        .unwrap_or(0);
+                    println!("For group {}: MAX = {}", group_value, max);
+                }
+                _ => {
+                    println!("Unknown function: {}", function_name);
+                }
+            }
+        }
+    }
+
+    // fn import_table_from_csv(db: &mut Db, file_name: &str) {
+    //     let contents = fs::read_to_string(file_name)
+    //         .expect("Something went wrong reading the file");
+    
+    //     let mut lines = contents.lines();
+    
+    //     // First line is the header
+    //     let header = lines.next().unwrap();
+    //     let header: Vec<&str> = header.split(",").collect();
+    
+    //     // Second line is the model
+    //     let model = lines.next().unwrap();
+    //     let model: Vec<&str> = model.split(",").collect();
+    
+    //     // Create the table
+    //     let table_name = file_name.split(".").next().unwrap();
+    //     db.createTable(table_name.to_string(), header.iter().map(|s| s.to_string()).collect(), model.iter().map(|s| s.to_string()).collect());
+    
+    //     // Insert the data
+    //     for line in lines {
+    //         let values: Vec<&str> = line.split(",").collect();
+    //         let mut row: HashMap<String, Box<dyn Any + Send>> = HashMap::new();
+    //         for (i, value) in values.iter().enumerate() {
+    //             row.insert(header[i].to_string(), Box::new(value.to_string()));
+    //         }
+    //         db.table.get_mut(table_name).unwrap().insert(row);
+    //     }
+    // }
+
+        //nabeel
+    fn import_table_from_csv(db: &mut Db, file_name: &str) -> io::Result<()> {
+        println!("Importing table from CSV file: {}", file_name);
+    
+        let file_path = Path::new(file_name);
+        println!("File path: {:?}", file_path);
+        let file = File::open(&file_path)?;
+        let reader = io::BufReader::new(file);
+    
+        let mut lines = reader.lines();
+        let table_name = file_path.file_stem().unwrap().to_str().unwrap().to_owned();
+    
+        // First line: column names (order)
+        if let Some(Ok(line)) = lines.next() {
+            let order: Vec<String> = line.split(',')
+                .map(|s| s.trim().to_string())
+                .map(|s| if s.starts_with('\u{feff}') { s.replacen('\u{feff}', "", 1) } else { s })
+                .collect();
+    
+            // Second line: datatypes (model)
+            if let Some(Ok(line)) = lines.next() {
+                let model: Vec<String> = line.split(',').map(|s| s.trim().to_string()).collect();
+    
+                let mut table = Table {
+                    name: table_name.clone(),
+                    model,
+                    order: order.clone(),
+                    cells: HashMap::new(),
+                    rows: 0,
+                    relations: Vec::new(),
+                };
+    
+                // Print table name
+                println!("Table name: {}", table.name);
+                println!("Table columns: {:?}", table.order);
+                println!("Table datatypes: {:?}", table.model);
+
+    
+                // All other lines: entries
+                for line in lines {
+                    if let Ok(line) = line {
+                        let values: Vec<&str> = line.split(',').collect();
+                        for (i, value) in values.iter().enumerate() {
+                            let cell = match &table.model[i][..] {
+                                "i32" => Box::new(value.trim().parse::<i32>().unwrap()) as Box<dyn Any + Send>,
+                                "f32" => Box::new(value.trim().parse::<f32>().unwrap()) as Box<dyn Any + Send>,
+                                "bool" => Box::new(value.trim().parse::<bool>().unwrap()) as Box<dyn Any + Send>,
+                                "char" => Box::new(value.trim().parse::<char>().unwrap()) as Box<dyn Any + Send>,
+                                _ => Box::new(value.trim().to_string()) as Box<dyn Any + Send>,
+                            };
+                            table.cells.entry(order[i].clone()).or_insert_with(Vec::new).push(cell);
+                        }
+                        table.rows += 1;
+                    }
+                }
+    
+                db.table.insert(table_name, table);
+            }
+            //print table calumns i.e table.order
+        }
+    
+        Ok(())
+    }
+
+
 
     impl Logger {
         pub fn reset(&mut self) {
@@ -896,7 +1063,7 @@ pub mod dataBased {
                                     });
 
                                 for (index, _) in rows {
-                                    println!("Row #{}:", index + 1);
+                                    //println!("Row #{}:", index + 1);
                                     for key in order {
                                         if let Some(value) = temp.cells.get(key).and_then(|v| v.get(index)) {
                                             let formatted_value = value.downcast_ref::<String>().map(|s| s.to_string())
@@ -950,7 +1117,7 @@ pub mod dataBased {
                                         });
                     
                                         for (index, _) in rows.iter().rev() {
-                                            println!("Row #{}:", index + 1);
+                                            //println!("Row #{}:", index + 1);
                                             for key in order {
                                                 if let Some(value) = temp.cells.get(key).and_then(|v| v.get(*index)) {
                                                     let formatted_value = value.downcast_ref::<String>().map(|s| s.to_string())
@@ -1124,10 +1291,98 @@ pub mod dataBased {
                     },
                     _ => {}
                 },
-                4=>{
-                    
-                }
+                4 => {
+                    match g[0].to_lowercase().as_str() {
+                        //nabeel
+                        "groupby"=>{
+                            if b_tb{
+                                let column_name = &g[1].to_lowercase().to_string();
+                                let aggregate_function = &g[2].to_lowercase().to_string();
+                                let function_column = &g[3].to_lowercase().to_string();
+                                
 
+
+                                
+                                let temp = workspaces.get(&a_ws).unwrap().database.get(&a_db).unwrap().table.get(&a_tb).unwrap();
+                                let order = &temp.order;
+                                let mut found_column = false;
+                                let mut found_function_column = false;
+
+                                for i in order {
+                                    if i == column_name {
+                                        found_column = true;
+                                        break;
+                                    }
+                                }
+
+                                for i in order {
+                                    if i == function_column {
+                                        found_function_column = true;
+                                        break;
+                                    }
+                                }
+
+                               //let mut rows: Vec<_> = temp.cells.get(column_name).unwrap().iter().enumerate().collect();
+
+
+
+                                if found_column && found_function_column{
+                                    let column_values: Vec<String> = temp.cells
+                                            .get(column_name)
+                                            .unwrap()
+                                            .iter()
+                                            .map(|v| v.downcast_ref::<String>().map(|s| s.to_string())
+                                                .or_else(|| v.downcast_ref::<i32>().map(|i| i.to_string()))
+                                                .or_else(|| v.downcast_ref::<f32>().map(|f| f.to_string()))
+                                                .or_else(|| v.downcast_ref::<bool>().map(|b| b.to_string()))
+                                                .or_else(|| v.downcast_ref::<char>().map(|c| c.to_string()))
+                                                .unwrap_or_else(|| format!("{:?}", v))
+                                            ).collect();
+                                    
+                                    
+                                    let mut groups: HashMap<String, Vec<usize>> = HashMap::new();
+                                    for (index, value) in column_values.iter().enumerate() {
+                                        groups.entry(value.clone()).or_insert_with(Vec::new).push(index);
+                                    }
+
+                                    //println!("I AM HERE MOOSA");
+                                    apply_aggregate_function(&aggregate_function, function_column, temp, &groups);
+
+                                }else{
+                                    logger.update(-1006, "".to_owned());
+                                }
+
+                                
+                            } else {
+                                logger.update(-1008, "".to_owned());
+                            }
+                        }
+                        //nabeel
+                        "table" => {
+                            if g.len() != 4 {
+                                logger.update(-1000, g[1].to_string());
+                            }
+                            else if g[1] != "from" || g[2] != "CSV" {
+                                logger.update(-10, g[2].to_owned());
+                            }
+                            else if b_db && b_ws {
+                                let file_name = &g[3];
+                                let mut ws_to_use = workspaces.get_mut(&a_ws).unwrap();
+                                if b_db {
+                                    let db_to_use = ws_to_use.database.get_mut(&a_db).unwrap();
+                                    import_table_from_csv(db_to_use, file_name);
+                                } else {
+                                    logger.update(-9, g[2].to_owned())
+                                }
+                            } else {
+                                logger.update(-10, g[2].to_owned());
+                            }
+                        }
+                        _ => {
+                            // Code for other cases
+                        }
+                    }
+                },
                 5=>{
                     
                     match g[0].to_lowercase().as_str(){
@@ -1257,6 +1512,7 @@ pub mod dataBased {
                             
 
                         }
+                        
                         _=>{
                             logger.update(-1000, "".to_owned());
                         }
@@ -1276,9 +1532,5 @@ pub mod dataBased {
 
 
 fn main() {
-    
     generateSession();
-
-    
-
 }
