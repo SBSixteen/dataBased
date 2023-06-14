@@ -1,0 +1,8 @@
+<dtypes = String:Integer:Float:Char:Boolean/>
+<colnames = Name:Age:Weight(KG):Gender:Adult/>
+<DATA>
+<Record Name="Nabeel" Age=22 Weight(KG)=54.3 Gender="M" Adult=true/>
+<Record Name="Moosah" Age=22 Weight(KG)=64.3 Gender="M" Adult=true/>
+<Record Name="Moosah%20Hashim" Age=22 Weight(KG)=64.3 Gender="M" Adult=true/>
+<Record Name="Saad%20Karim" Age=22 Weight(KG)=75.2 Gender="M" Adult=true/>
+<DATA/>
