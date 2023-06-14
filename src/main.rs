@@ -1322,6 +1322,38 @@ pub mod dataBased {
 
                             }
 
+                            "database"=>{
+
+                                if b_ws{
+
+                                    let temp = workspaces.get_mut(&a_ws).unwrap();
+                                        if temp.database.contains_key(g[2]){
+                                            temp.database.remove(g[2]);
+                                            a_db = "".to_owned();
+                                            b_db = false;
+                                        }else{
+                                            logger.update(-9999, g[2].to_owned()) //Non Existent DB
+                                        }
+
+                                }
+
+                            }
+
+                            
+                            "workspace"=>{
+
+                                if workspaces.contains_key(g[2].clone()){
+
+                                    workspaces.remove(g[2]);
+                                    b_ws = false;
+                                    a_ws = "".to_owned();
+
+                                }else{
+                                    logger.update(-9999, String::new()) //Workspace non existent
+                                }
+
+                            }
+
                             _ => {
                                 logger.update(-9999,"".to_owned());
                             }
