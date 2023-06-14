@@ -614,7 +614,16 @@ pub mod dataBased {
                         "help" => {
                             println!("Help is on the way!")
                         }
-                        //Nabeel
+
+                        "cleartable" =>{
+                            if b_tb{
+                                let temp = workspaces.get_mut(&a_ws).unwrap().database.get_mut(&a_db).unwrap().table.get_mut(&a_tb).unwrap();
+                                temp.cells = HashMap::new();
+                                temp.rows = 0;
+                            }else {
+                                logger.update(-9999, String::new())
+                            }
+                        }
                         "print" => {
                             if (b_tb) {
                                 let temp = workspaces.get(&a_ws).unwrap().database.get(&a_db).unwrap().table.get(&a_tb).unwrap();
@@ -1229,6 +1238,10 @@ pub mod dataBased {
                             if workspaces.contains_key(g[2]) {
                                 b_ws = true;
                                 a_ws = g[2].to_string();
+                                b_db = false;
+                                b_tb = false;
+                                a_db = "".to_string();
+                                a_tb = String::new();
                             } else {
                                 logger.update(-1003, g[2].to_string())
                             }
@@ -1240,6 +1253,8 @@ pub mod dataBased {
                                 if ws.database.contains_key(g[2]){
                                     b_db = true;
                                     a_db = g[2].to_string();
+                                    b_tb = false;
+                                    a_tb = String::new();
                                 }else{
                                     logger.update(-1004, g[2].to_string())
                                 }
@@ -1415,7 +1430,7 @@ pub mod dataBased {
                                                 let insertion = temp.cells.get_mut(&val[0]).unwrap();
                                                 k+=1;
 
-                                                println!("dtype{}",datatype);
+                                                //println!("dtype{}",datatype);
                                                 match datatype.as_str(){
                                                     "string" => {
                                                         value = value.replace("\"", "");
@@ -1461,7 +1476,7 @@ pub mod dataBased {
 
                                         }
                                     
-                                        print!("{:?}", &temp);
+                                        //print!("{:?}", &temp);
                                     }
 
 
