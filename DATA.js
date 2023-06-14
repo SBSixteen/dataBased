@@ -1,0 +1,16 @@
+//String:Integer:Float:Char:Boolean
+//Name:Age:Weight(KG):Gender:Adult
+[
+{ 
+"Name":"Nabeel","Age":22,"Weight(KG)":54.3,"Gender":"M","Adult":true
+},
+{ 
+"Name":"Moosah","Age":22,"Weight(KG)":64.3,"Gender":"M","Adult":true
+},
+{ 
+"Name":"Moosah%20Hashim","Age":22,"Weight(KG)":64.3,"Gender":"M","Adult":true
+},
+{ 
+"Name":"Saad%20Karim","Age":22,"Weight(KG)":75.2,"Gender":"M","Adult":true
+}
+]

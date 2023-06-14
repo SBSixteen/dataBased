@@ -15,7 +15,7 @@ pub mod dataBased {
         collections::HashMap,
         fmt::{Error, Debug},
         hash::Hash,
-        io::{self, stdout, Write, BufRead}, fs::{self, File}, any::Any, path::Path,
+        io::{self, stdout, Write, BufRead, Bytes}, fs::{self, File, read_to_string}, any::Any, path::Path,
     };
 
     use chrono::{Utc, Local};
@@ -124,39 +124,9 @@ pub mod dataBased {
         }
     }
 
-    // fn import_table_from_csv(db: &mut Db, file_name: &str) {
-    //     let contents = fs::read_to_string(file_name)
-    //         .expect("Something went wrong reading the file");
-    
-    //     let mut lines = contents.lines();
-    
-    //     // First line is the header
-    //     let header = lines.next().unwrap();
-    //     let header: Vec<&str> = header.split(",").collect();
-    
-    //     // Second line is the model
-    //     let model = lines.next().unwrap();
-    //     let model: Vec<&str> = model.split(",").collect();
-    
-    //     // Create the table
-    //     let table_name = file_name.split(".").next().unwrap();
-    //     db.createTable(table_name.to_string(), header.iter().map(|s| s.to_string()).collect(), model.iter().map(|s| s.to_string()).collect());
-    
-    //     // Insert the data
-    //     for line in lines {
-    //         let values: Vec<&str> = line.split(",").collect();
-    //         let mut row: HashMap<String, Box<dyn Any + Send>> = HashMap::new();
-    //         for (i, value) in values.iter().enumerate() {
-    //             row.insert(header[i].to_string(), Box::new(value.to_string()));
-    //         }
-    //         db.table.get_mut(table_name).unwrap().insert(row);
-    //     }
-    // }
-
         //nabeel
     fn import_table_from_csv(db: &mut Db, file_name: &str) -> io::Result<()> {
-        println!("Importing table from CSV file: {}", file_name);
-    
+        println!("Importing table from CSV file: {}", file_name);   
         let file_path = Path::new(file_name);
         println!("File path: {:?}", file_path);
         let file = File::open(&file_path)?;
@@ -171,11 +141,9 @@ pub mod dataBased {
                 .map(|s| s.trim().to_string())
                 .map(|s| if s.starts_with('\u{feff}') { s.replacen('\u{feff}', "", 1) } else { s })
                 .collect();
-    
             // Second line: datatypes (model)
             if let Some(Ok(line)) = lines.next() {
-                let model: Vec<String> = line.split(',').map(|s| s.trim().to_string()).collect();
-    
+                let model: Vec<String> = line.split(',').map(|s| s.trim().to_string()).collect();  
                 let mut table = Table {
                     name: table_name.clone(),
                     model,
@@ -183,14 +151,11 @@ pub mod dataBased {
                     cells: HashMap::new(),
                     rows: 0,
                     relations: Vec::new(),
-                };
-    
+                }; 
                 // Print table name
                 println!("Table name: {}", table.name);
                 println!("Table columns: {:?}", table.order);
                 println!("Table datatypes: {:?}", table.model);
-
-    
                 // All other lines: entries
                 for line in lines {
                     if let Ok(line) = line {
@@ -208,12 +173,9 @@ pub mod dataBased {
                         table.rows += 1;
                     }
                 }
-    
                 db.table.insert(table_name, table);
             }
-            //print table calumns i.e table.order
         }
-    
         Ok(())
     }
 
@@ -382,6 +344,18 @@ pub mod dataBased {
                         "No table set in this session!",
                     );
                 }
+                -15  =>{
+                    println!("{}{}| {} {} {}", " Error Code ".on_bright_yellow() , e_string.to_string().on_bright_yellow() ,"Export type", &y.cyan(), "is not supportd by dataBased!");
+                }
+                -16 =>{
+                    println!("{}{}| {} {} {}", " Error Code ".on_bright_yellow() , e_string.to_string().on_bright_yellow() ,"Object Type:", &y.cyan(), "cannot be saved by dataBased!");
+                }
+                -17 =>{
+                    println!("{}{}| {} {} {}", " Error Code ".on_bright_yellow() , e_string.to_string().on_bright_yellow() ,"Cannot Delete Table:", &y.cyan(), "as it does not exist!");
+                }
+                -18 =>{
+                    println!("{}{}| {} {} {}", " Error Code ".on_bright_yellow() , e_string.to_string().on_bright_yellow() ,"Cannot Import from Type:", &y.cyan(), "as it is invalid!");
+                }
 
                 -1000 => {
                     println!(
@@ -428,9 +402,6 @@ pub mod dataBased {
                 }
                 -1010  =>{
                     println!("{}{}| {} {} {}", " Warning Code ".on_bright_yellow() , e_string.to_string().on_bright_yellow() ,"There are", &y.cyan(), "zero workspaces in this session!");
-                }
-                -1011  =>{
-                    println!("{}{}| {} {} {}", " Error Code ".on_bright_yellow() , e_string.to_string().on_bright_yellow() ,"Export type", &y.cyan(), "is not supportd by dataBased!");
                 }
 
                 _ => {
@@ -755,7 +726,7 @@ pub mod dataBased {
 
             input = input[0..input.len() - 2].to_owned();
 
-            let g = input.split(" ").collect::<Vec<&str>>();
+            let mut g = input.split(" ").collect::<Vec<&str>>();
             let len = g.len();
 
             //Filter input command by length
@@ -771,7 +742,16 @@ pub mod dataBased {
                         "help" => {
                             println!("Help is on the way!")
                         }
-                        //Nabeel
+
+                        "cleartable" =>{
+                            if b_tb{
+                                let temp = workspaces.get_mut(&a_ws).unwrap().database.get_mut(&a_db).unwrap().table.get_mut(&a_tb).unwrap();
+                                temp.cells = HashMap::new();
+                                temp.rows = 0;
+                            }else {
+                                logger.update(-9999, String::new())
+                            }
+                        }
                         "print" => {
                             if (b_tb) {
                                 let temp = workspaces.get(&a_ws).unwrap().database.get(&a_db).unwrap().table.get(&a_tb).unwrap();
@@ -783,7 +763,7 @@ pub mod dataBased {
                                         if let Some(value) = temp.cells.get(key).and_then(|v| v.get(index)) {
                                             let return_value = value.downcast_ref::<String>().map(|s| s.to_string())
                                                 .or_else(|| value.downcast_ref::<i32>().map(|i| i.to_string()))
-                                                .or_else(|| value.downcast_ref::<f32>().map(|f| f.to_string()))
+                                                .or_else(|| value.downcast_ref::<f64>().map(|f| f.to_string()))
                                                 .or_else(|| value.downcast_ref::<bool>().map(|b| b.to_string()))
                                                 .or_else(|| value.downcast_ref::<char>().map(|c| c.to_string()))
                                                 .unwrap_or_else(|| format!("{:?}", value));
@@ -904,7 +884,7 @@ pub mod dataBased {
 
                         "json" =>{
 
-                            let mut data = String::from("[ \r\n");
+                            let mut data = String::from("//");
 
                             let temp = workspaces.get(&a_ws).unwrap().database.get(&a_db).unwrap().table.get(&a_tb).unwrap();
                             let mut vec = Vec::new();
@@ -913,7 +893,25 @@ pub mod dataBased {
                                 vec.push(temp.cells.get(i.as_str()).unwrap());
                             }
 
+                            for i in &temp.model{
+                                data.push_str(i);
+                                data.push_str(":")
+                            }
 
+                            data = data[0..data.len()-1].to_owned();
+                            data.push_str("\r\n");
+
+                            data.push_str("//");
+
+                            for i in &temp.order{
+                                data.push_str(i);
+                                data.push_str(":")
+                            }
+
+                            data = data[0..data.len()-1].to_owned();
+                            data.push_str("\r\n");
+
+                            data.push_str("[\r\n");
 
                             for i in 0 as usize..temp.rows as usize{
                                 data.push_str("{ \r\n");
@@ -923,23 +921,48 @@ pub mod dataBased {
                                     data.push_str(&temp.order[j]);
                                     data.push_str(r#"""#);
                                     data.push_str(":");
-                                    let x = vec[j].get(i).unwrap();
-                                    data.push_str(&format!("{:?}",x));
+
+                                    let temp_dtype = temp.model[j].to_lowercase().clone();
+
+                                    if temp_dtype == "string" || temp_dtype == "word" || temp_dtype == "str"{
+                                        let x = vec[j].get(i).unwrap().downcast_ref::<String>().unwrap();
+                                        println!("{}",x);
+                                        data.push_str(&format!("{:?}",x.replace(" ", "%20")));
+                                    }
+                                    if temp_dtype == "integer" || temp_dtype == "int" || temp_dtype == "i32" || temp_dtype == "number"{
+                                        let x = vec[j].get(i).unwrap().downcast_ref::<i32>().unwrap();
+                                        println!("{}",x);
+                                        data.push_str(&format!("{:?}",x));
+                                    }
+                                    if temp_dtype == "char" || temp_dtype == "letter" {
+                                        let x = vec[j].get(i).unwrap().downcast_ref::<String>().unwrap();
+                                        println!("{}",x);
+                                        data.push_str(&format!("{:?}",x));
+                                    }
+                                    if temp_dtype == "float" || temp_dtype == "f64" {
+                                        let x = vec[j].get(i).unwrap().downcast_ref::<f64>().unwrap();
+                                        println!("{}",x);
+                                        data.push_str(&format!("{:?}",x));
+                                    }
+                                    if temp_dtype == "bool" || temp_dtype == "boolean" {
+                                        let x = vec[j].get(i).unwrap().downcast_ref::<bool>().unwrap();
+                                        println!("{}",x);
+                                        data.push_str(&format!("{:?}",x));
+                                    }
                                     if j != vec.len()-1{
                                     data.push_str(",");
                                     }
-                                    data.push_str("\r\n");
                                 }
 
 
                                 if i == temp.rows as usize -1{
-                                    data.push_str("} \r\n");
+                                    data.push_str("\r\n}\r\n");
                                 }else{
-                                    data.push_str("}, \r\n");
+                                    data.push_str("\r\n},\r\n");
                                 }
                             }
 
-                            data.push_str("\r\n ]");
+                            data.push_str("]");
 
                             let mut path = String::from("./");
                             path.push_str(&a_tb);
@@ -952,15 +975,38 @@ pub mod dataBased {
                             
                             let mut data = String::from("<");
                             data.push_str(&a_tb);
-                            data.push_str("> \r\n");
+                            data.push_str(">\r\n");
 
                             let temp = workspaces.get(&a_ws).unwrap().database.get(&a_db).unwrap().table.get(&a_tb).unwrap();
                             let mut vec = Vec::new();
 
+                            let mut data = String::from("<dtypes = ");
+                            for i in &temp.model{
+                                data.push_str(i);
+                                data.push_str(":")
+                            }
+
+                            data = data[0..data.len()-1].to_owned();
+                            data.push_str("/>\r\n");
+
+                            data.push_str("<colnames = ");
+
+                            for i in &temp.order{
+                                data.push_str(i);
+                                data.push_str(":")
+                            }
+
+                            data = data[0..data.len()-1].to_owned();
+                            data.push_str("/>\r\n");
+
+                            data.push_str("<");
+                            data.push_str(&a_tb);
+                            data.push_str(">\r\n");
+
                             for i in &temp.order{
                                 vec.push(temp.cells.get(i.as_str()).unwrap());
                             }
-
+                            
                             for i in 0 as usize..temp.rows as usize{
                                 data.push_str("<Record");
                                 for j in 0..vec.len(){
@@ -968,11 +1014,35 @@ pub mod dataBased {
                                     data.push_str(" ");
                                     data.push_str(&temp.order[j]);
                                     data.push_str("=");
-                                    let x = vec[j].get(i).unwrap();
-                                    data.push_str(&format!("{:?}",x));
+
+                                    //println!("{:?}", temp);
+                                    let temp_dtype = temp.model[j].to_lowercase().clone();
+
+                                    if temp_dtype == "string" || temp_dtype == "word" || temp_dtype == "str"{
+                                        let x = vec[j].get(i).unwrap().downcast_ref::<String>().unwrap();
+                                        data.push_str(&format!("{:?}",x.replace(" ", "%20")));
+                                    }
+                                    if temp_dtype == "integer" || temp_dtype == "int" || temp_dtype == "i32" || temp_dtype == "number"{
+                                        let x = vec[j].get(i).unwrap().downcast_ref::<i32>().unwrap();
+
+                                        data.push_str(&format!("{:?}",x));
+                                    }
+                                    if temp_dtype == "char" || temp_dtype == "letter" {
+                                        let x = vec[j].get(i).unwrap().downcast_ref::<String>().unwrap();
+                                        data.push_str(&format!("{:?}",x));
+                                    }
+                                    if temp_dtype == "float" || temp_dtype == "f64" {
+                                        let x = vec[j].get(i).unwrap().downcast_ref::<f64>().unwrap();
+                                        data.push_str(&format!("{:?}",x));
+                                    }
+                                    if temp_dtype == "bool" || temp_dtype == "boolean" {
+                                        let x = vec[j].get(i).unwrap().downcast_ref::<bool>().unwrap();
+                                        data.push_str(&format!("{:?}",x));
+                                    }
+
                                 }
 
-                                    data.push_str("/> \r\n");
+                                    data.push_str("/>\r\n");
 
                             }
 
@@ -990,10 +1060,28 @@ pub mod dataBased {
 
                         "csv"=>{
                             
-                            let mut data = String::from("");
+                            let mut data = String::from("//");
 
                             let temp = workspaces.get(&a_ws).unwrap().database.get(&a_db).unwrap().table.get(&a_tb).unwrap();
                             let mut vec = Vec::new();
+
+                            for i in &temp.model{
+                                data.push_str(i);
+                                data.push_str(":")
+                            }
+
+                            data = data[0..data.len()-1].to_owned();
+                            data.push_str("\r\n");
+
+                            data.push_str("//");
+
+                            for i in &temp.order{
+                                data.push_str(i);
+                                data.push_str(":")
+                            }
+
+                            data = data[0..data.len()-1].to_owned();
+                            data.push_str("\r\n");
 
                             for i in &temp.order{
                                 vec.push(temp.cells.get(i.as_str()).unwrap());
@@ -1002,8 +1090,33 @@ pub mod dataBased {
                             for i in 0 as usize..temp.rows as usize{
                                 for j in 0..vec.len(){
                                     
-                                    let x = vec[j].get(i).unwrap();
-                                    data.push_str(&format!(r#"{:?}"#,x));
+                                    let temp_dtype = temp.model[j].to_lowercase().clone();
+
+                                    if temp_dtype == "string" || temp_dtype == "word" || temp_dtype == "str"{
+                                        let x = vec[j].get(i).unwrap().downcast_ref::<String>().unwrap();
+                                        println!("{}",x);
+                                        data.push_str(&format!("{:?}",x));
+                                    }
+                                    if temp_dtype == "integer" || temp_dtype == "int" || temp_dtype == "i32" || temp_dtype == "number"{
+                                        let x = vec[j].get(i).unwrap().downcast_ref::<i32>().unwrap();
+                                        println!("{}",x);
+                                        data.push_str(&format!("{:?}",x));
+                                    }
+                                    if temp_dtype == "char" || temp_dtype == "letter" {
+                                        let x = vec[j].get(i).unwrap().downcast_ref::<String>().unwrap();
+                                        println!("{}",x);
+                                        data.push_str(&format!("{:?}",x));
+                                    }
+                                    if temp_dtype == "float" || temp_dtype == "f64" {
+                                        let x = vec[j].get(i).unwrap().downcast_ref::<f64>().unwrap();
+                                        println!("{}",x);
+                                        data.push_str(&format!("{:?}",x));
+                                    }
+                                    if temp_dtype == "bool" || temp_dtype == "boolean" {
+                                        let x = vec[j].get(i).unwrap().downcast_ref::<bool>().unwrap();
+                                        println!("{}",x);
+                                        data.push_str(&format!("{:?}",x));
+                                    }
                                     if j != vec.len()-1{
                                     data.push_str(",");
                                     }
@@ -1029,6 +1142,18 @@ pub mod dataBased {
                         
 
                     },
+                    "save" =>
+                        match g[1].to_lowercase().as_str(){
+                            "workspace" =>{
+                                let current = workspaces.get(&a_ws).unwrap().clone();
+                                current.print();
+                            }
+
+                            _ =>{
+                                logger.update(-16, g[1].to_owned())
+                            }
+                        }
+        
                     _ => {}
                 },
                 3 => match g[0].to_lowercase().as_str() {
@@ -1074,7 +1199,7 @@ pub mod dataBased {
                                             // Add more types if needed
                                             .unwrap_or_else(|| format!("{:?}", value));
 
-                                            print!(" Row # {} => {}: {} ", index+1, key, formatted_value);
+                                            print!("{}: {} ", key, formatted_value);
                                         }
                                     }
                                     println!();
@@ -1145,7 +1270,7 @@ pub mod dataBased {
                             // Handle other print options
                         }
                     }
-                   "insert" => match g[1].to_lowercase().as_str() {
+                    "insert" => match g[1].to_lowercase().as_str() {
                         "record" => {
 
                             if !b_tb{
@@ -1170,16 +1295,17 @@ pub mod dataBased {
                             let len = model.clone().len() as usize;
                             //datacheck
 
-
                             for i in 0..len{
 
                                 let mut t = cells.get_mut(&order[i]).unwrap(); 
                                 let datatype = model[i].clone().to_lowercase();
-
                                 match datatype.as_str(){
-
                                     "string" => {
-                                        t.push(Box::new(temp[i].to_owned()));
+                                        t.push(Box::new(temp[i].replace("%20", " ").to_owned()));
+                                    }
+                                    "char" => {
+                                        let temp_char = temp[i][0..temp[i].len()].to_owned();
+                                        t.push(Box::new(temp_char));
                                     }
                                     "i32" => {
                                         t.push(Box::new(temp[i].parse::<i32>().unwrap()));
@@ -1199,15 +1325,17 @@ pub mod dataBased {
                                     "float" => {
                                         t.push(Box::new(temp[i].parse::<f64>().unwrap()));
                                     }
-                                    "bool" => {
-                                        t.push(Box::new(temp[i].parse::<bool>().unwrap()));
-                                    }
                                     "boolean" => {
-                                        t.push(Box::new(temp[i].parse::<bool>().unwrap()));
+                                        let test = temp[i].to_lowercase();
+                                        if test == "true"{
+                                            t.push(Box::new(true));
+                                        }else{
+                                            t.push(Box::new(false));
+                                        }
                                     }
 
                                     _=>{
-
+                                        //invalid datatype return errors
                                     }
 
                                 }                               
@@ -1223,11 +1351,25 @@ pub mod dataBased {
 
                         }
                     }
-                    "set" => match g[1].to_lowercase().as_str() {
+                    "set" => {
+                    
+                    if g[1].to_lowercase().as_str() == "db"{
+                        g[1] = "database"
+                    }
+
+                    if g[1].to_lowercase().as_str() == "ws"{
+                        g[1] = "workspace"
+                    }
+                    
+                    match g[1].to_lowercase().as_str() {
                         "workspace" => {
                             if workspaces.contains_key(g[2]) {
                                 b_ws = true;
                                 a_ws = g[2].to_string();
+                                b_db = false;
+                                b_tb = false;
+                                a_db = "".to_string();
+                                a_tb = String::new();
                             } else {
                                 logger.update(-1003, g[2].to_string())
                             }
@@ -1239,6 +1381,8 @@ pub mod dataBased {
                                 if ws.database.contains_key(g[2]){
                                     b_db = true;
                                     a_db = g[2].to_string();
+                                    b_tb = false;
+                                    a_tb = String::new();
                                 }else{
                                     logger.update(-1004, g[2].to_string())
                                 }
@@ -1263,10 +1407,21 @@ pub mod dataBased {
                                 logger.update(-1004, g[2].to_string())
                             }
                         }
-                        _ => {}
-                    },
+                        _ => {
 
-                    "create" => match g[1].to_lowercase().as_str() {
+                        }
+                    }
+                },
+                    "create" => {
+                        if g[1].to_lowercase().as_str() == "db"{
+                        g[1] = "database"
+                    }
+
+                    if g[1].to_lowercase().as_str() == "ws"{
+                        g[1] = "workspace"
+                    }
+                    
+                    match g[1].to_lowercase().as_str() {
                         "workspace" => {
                             if !workspaces.contains_key(g[2]) {
                                 workspaces.insert(
@@ -1285,10 +1440,68 @@ pub mod dataBased {
                                 active.addDB(g[2].to_string())
                             }
                         }
-                    
-
                         _ => logger.update(-1000, g[1].to_string()),
-                    },
+                    }}
+
+                    "delete" =>{
+                        match g[1].to_lowercase().as_str() {
+
+                            "table"=>{
+
+                                if b_db && b_ws{
+
+                                    let temp = workspaces.get_mut(&a_ws).unwrap();
+                                    let temp2 = temp.database.get_mut(&a_db).unwrap();
+                                    
+                                        if temp2.table.contains_key(g[2]){
+                                            temp2.table.remove(g[2]);
+                                            a_tb = "".to_owned();
+                                            b_tb = false;
+                                        }else{
+                                            logger.update(-17, g[2].to_owned())
+                                        }
+
+                                }
+
+                            }
+
+                            "database"=>{
+
+                                if b_ws{
+
+                                    let temp = workspaces.get_mut(&a_ws).unwrap();
+                                        if temp.database.contains_key(g[2]){
+                                            temp.database.remove(g[2]);
+                                            a_db = "".to_owned();
+                                            b_db = false;
+                                        }else{
+                                            logger.update(-9999, g[2].to_owned()) //Non Existent DB
+                                        }
+
+                                }
+
+                            }
+
+                            
+                            "workspace"=>{
+
+                                if workspaces.contains_key(g[2].clone()){
+
+                                    workspaces.remove(g[2]);
+                                    b_ws = false;
+                                    a_ws = "".to_owned();
+
+                                }else{
+                                    logger.update(-9999, String::new()) //Workspace non existent
+                                }
+
+                            }
+
+                            _ => {
+                                logger.update(-9999,"".to_owned());
+                            }
+                        }
+                    }
                     _ => {}
                 },
                 4 => {
@@ -1334,8 +1547,9 @@ pub mod dataBased {
                                             .map(|v| v.downcast_ref::<String>().map(|s| s.to_string())
                                                 .or_else(|| v.downcast_ref::<i32>().map(|i| i.to_string()))
                                                 .or_else(|| v.downcast_ref::<f32>().map(|f| f.to_string()))
+                                                .or_else(|| v.downcast_ref::<f32>().map(|f| f.to_string()))
                                                 .or_else(|| v.downcast_ref::<bool>().map(|b| b.to_string()))
-                                                .or_else(|| v.downcast_ref::<char>().map(|c| c.to_string()))
+                                                .or_else(|| v.downcast_ref::<char>().map(|c: &char| c.to_string()))
                                                 .unwrap_or_else(|| format!("{:?}", v))
                                             ).collect();
                                     
@@ -1362,21 +1576,165 @@ pub mod dataBased {
                             if g.len() != 4 {
                                 logger.update(-1000, g[1].to_string());
                             }
-                            else if g[1] != "from" || g[2] != "CSV" {
-                                logger.update(-10, g[2].to_owned());
-                            }
-                            else if b_db && b_ws {
-                                let file_name = &g[3];
-                                let mut ws_to_use = workspaces.get_mut(&a_ws).unwrap();
-                                if b_db {
-                                    let db_to_use = ws_to_use.database.get_mut(&a_db).unwrap();
-                                    import_table_from_csv(db_to_use, file_name);
+                            else if g[1] == "from" && g[2] == "CSV" {
+                                if b_db && b_ws {
+                                    let file_name = &g[3];
+                                    let mut ws_to_use = workspaces.get_mut(&a_ws).unwrap();
+                                    if b_db {
+                                        let db_to_use = ws_to_use.database.get_mut(&a_db).unwrap();
+                                        import_table_from_csv(db_to_use, file_name);
+                                    } else {
+                                        logger.update(-9, g[2].to_owned())
+                                    }
                                 } else {
-                                    logger.update(-9, g[2].to_owned())
+                                    logger.update(-10, g[2].to_owned());
                                 }
-                            } else {
-                                logger.update(-10, g[2].to_owned());
                             }
+                            
+                        }
+                        "import" => match g[1].to_lowercase().as_str(){
+
+                            "as" => match g[2].to_lowercase().as_str(){
+    
+                                "xml" =>{
+    
+                                    if b_ws && b_db{
+    
+                                        let mut lines = Vec::new();
+                                        let f = read_to_string(format!("./{}",&g[3])).unwrap();
+    
+                                        for i in f.lines(){
+                                            lines.push(i)
+                                        }
+                                        
+                                        let mut dtypes = lines[0].to_owned();
+                                        dtypes = dtypes.replace("<dtypes = ", "").replace("/>", "");
+                                        let datatypes = dtypes.split(":").map(|x| x.to_owned()).collect::<Vec<String>>();
+                                        //println!("{:?}", &datatypes);
+                                        let tablename = g[3].replace(".xml", "");
+                                        let colnames = lines[1].to_owned().replace("<colnames = ", "").replace("/>", "").split(":").map(|x| x.to_owned()).collect::<Vec<String>>();
+    
+                                        let mut temp = Table{
+                                            name: tablename,
+                                            order: colnames.clone(),
+                                            model:datatypes.clone(),
+                                            rows: lines.len() as i32 -4,
+                                            cells: HashMap::new(),
+                                            relations:Vec::new()
+                                        };
+    
+                                        //println!("{:?}", &temp);
+    
+                                        for i in colnames{
+                                            temp.cells.insert(i, Vec::new());
+                                        }
+    
+                                        for i in 3..lines.len()-1{
+    
+                                            let line = lines[i].to_owned().replace("<Record ", "").replace("/>","").trim().to_owned();
+                                            //println!("{}", &line);
+                                            let tempcols = line.split(" ").map(|f| f.to_owned()).collect::<Vec<String>>();
+                                            let mut k = 0;
+    
+                                                for j in tempcols{
+                                                   // println!("value => {}", &j);
+                                                    let val = j.split("=").map(|f| f.to_owned()).collect::<Vec<String>>();
+                                                    let mut value = val[1].clone();
+                                                    let datatype = temp.model[k].clone().to_lowercase();
+                                                    let insertion = temp.cells.get_mut(&val[0]).unwrap();
+                                                    k+=1;
+    
+                                                    //println!("dtype{}",datatype);
+                                                    match datatype.as_str(){
+                                                        "string" => {
+                                                            value = value.replace("\"", "");
+                                                            value = value.replace("%20", " ");
+                                                            insertion.push(Box::new(value.to_owned()));
+                                                        }
+                                                        "char" => {
+                                                            value = value.replace("\"", "");
+                                                            value = value[0..value.len()].to_owned();
+                                                            insertion.push(Box::new(value));
+                                                        }
+                                                        "i32" => {
+                                                            insertion.push(Box::new(value.parse::<i32>().unwrap()));
+                                                        }
+                                                        "integer" => {
+                                                            insertion.push(Box::new(value.parse::<i32>().unwrap()));
+                                                        }
+                                                        "int" => {
+                                                            insertion.push(Box::new(value.parse::<i32>().unwrap()));
+                                                        }
+                                                        "i64" => {
+                                                            insertion.push(Box::new(value.parse::<i64>().unwrap()));
+                                                        }
+                                                        "f32" => {
+                                                            insertion.push(Box::new(value.parse::<f32>().unwrap()));
+                                                        }
+                                                        "float" => {
+                                                            insertion.push(Box::new(value.parse::<f64>().unwrap()));
+                                                        }
+                                                        "boolean" => {
+                                                            let test = value.to_lowercase();
+                                                            if test == "true"{
+                                                                insertion.push(Box::new(true));
+                                                            }else{
+                                                                insertion.push(Box::new(false));
+                                                            }
+                                                        }
+                    
+                                                        _=>{
+                                                            //invalid datatype return errors
+                                                        }
+                                                }
+    
+                                            }
+                                        
+                                            //print!("{:?}", &temp);
+                                        }
+    
+    
+    
+                                        if b_ws{
+                                            let mut k = workspaces.get_mut(&a_ws).unwrap();
+                                            if b_db{
+    
+                                                let mut d = k.database.get_mut(&a_db).unwrap(); 
+                                                d.table.insert(temp.name.clone(), temp);
+    
+                                            }else{
+                                                logger.update(-9, g[2].to_owned())
+                                            }
+                                    }
+    
+                                    }else{
+    
+                                        if !b_ws{
+                                            logger.update(-12, String::new())
+                                        }
+                                        if !b_db{
+                                            logger.update(-13, String::new())
+                                        }
+    
+    
+                                    }
+    
+                                }
+    
+                                _ =>{
+                                    logger.update(-18, g[3].to_owned())
+                                }
+    
+    
+                            }
+    
+                            _=>{
+                                logger.update(-09999, "".to_owned())
+                            }
+                        }
+    
+                        _=>{
+                            logger.update(-09999, "".to_owned())
                         }
                         _ => {
                             // Code for other cases
@@ -1393,8 +1751,8 @@ pub mod dataBased {
                                 
                                 "table"=>{
 
-                                    let x = g[3].split(":").collect::<Vec<&str>>();
-                                    let y = g[4].split(":").collect::<Vec<&str>>();
+                                    let x = g[3].split(":").collect::<Vec<&str>>(); //ColNames
+                                    let y = g[4].split(":").collect::<Vec<&str>>(); //Col Datatypes
 
                                     if x.len() != y.len(){
                                         if x.len() > y.len(){
@@ -1438,9 +1796,6 @@ pub mod dataBased {
                                                     count+=1;
                                                 }
                                                 "float"=>{
-                                                    count+=1;
-                                                }
-                                                "f64"=>{
                                                     count+=1;
                                                 }
                                                 "f64"=>{
